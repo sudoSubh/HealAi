@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HealerAi</title>
+    <meta name="description" content="HealerAi is a one stop solution for your health." />
+    <meta name="author" content="Synapse Forge" />
+    <link rel="icon" type="image/x-icon" href="/HealNavLogo.webp"/>
+    
+    <!-- Google Translate API -->
+    <script type="text/javascript">
+      function googleTranslateElementInit() {
+        new google.translate.TranslateElement(
+          { 
+            pageLanguage: 'en',
+            includedLanguages: 'en,hi,bn,te,mr,ta,ur,gu,kn,or,ml,pa,as,mai,sat,ks,ne,sd,doi,brx,gom,mni',
+            layout: google.translate.TranslateElement.InlineLayout.SIMPLE
+          },
+          'google_translate_element'
+        );
+      }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- Google Translate element -->
+    <div id="google_translate_element" style="position: fixed; top: -100px; left: -100px;"></div>
+  </body>
+</html>

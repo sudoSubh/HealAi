@@ -1,0 +1,17 @@
+{
+  "name": "healerai-backend",
+  "version": "1.0.0",
+  "description": "Backend for HealerAI health navigation platform",
+  "main": "server.cjs",
+  "scripts": {
+    "start": "node server.cjs",
+    "dev": "nodemon server.cjs"
+  },
+  "dependencies": {
+    "express": "^4.21.1",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}
