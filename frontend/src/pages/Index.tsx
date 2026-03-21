@@ -49,6 +49,13 @@ import { GradientButton } from "@/components/ui/gradient-button";
 import { FloatingElement, PulsingOrb } from "@/components/ui/floating-elements";
 import { HeroSection } from "@/components/HeroSection";
 import { HealthMetricCard } from "@/components/ui/health-metrics-card";
+// Aceternity UI Components
+import { Spotlight, SpotlightCard } from "@/components/aceternity/spotlight";
+import { BackgroundBeams } from "@/components/aceternity/background-beams";
+import { HoverEffect } from "@/components/aceternity/hover-effect";
+import { TextGenerateEffect } from "@/components/aceternity/text-generate-effect";
+import { InfiniteMovingCards } from "@/components/aceternity/infinite-moving-cards";
+import { MovingBorderButton } from "@/components/aceternity/moving-border";
 
 const Index = () => {
   const location = useLocation();
@@ -103,6 +110,35 @@ const Index = () => {
       color: "from-emerald-500 to-teal-600"
     },
 
+  ];
+
+  // Testimonials data for infinite moving cards
+  const testimonials = [
+    {
+      quote: "HealerAi helped me understand my symptoms before my doctor's appointment. The AI analysis was incredibly accurate and gave me peace of mind.",
+      name: "Sarah Johnson",
+      title: "Healthcare Professional"
+    },
+    {
+      quote: "The medical chatbot is like having a knowledgeable friend available 24/7. It's been invaluable for quick health questions.",
+      name: "Michael Chen",
+      title: "Software Engineer"
+    },
+    {
+      quote: "I love the health education videos. They've helped me make better lifestyle choices for my family's wellbeing.",
+      name: "Emily Rodriguez",
+      title: "Mother of Two"
+    },
+    {
+      quote: "Finding nearby healthcare resources used to be a hassle. Now with HealerAi, I can locate specialists in seconds.",
+      name: "David Thompson",
+      title: "Retired Teacher"
+    },
+    {
+      quote: "The personalized health insights have transformed how I approach my wellness routine. Highly recommend!",
+      name: "Lisa Park",
+      title: "Fitness Instructor"
+    }
   ];
 
   // Add health metrics for the Why Choose HealerAi section
@@ -333,6 +369,14 @@ const Index = () => {
       <div className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-4 transition-all duration-300`}>
         {/* Hero Section with Animation */}
         <section className="relative overflow-hidden bg-gradient-to-r from-green-600 via-emerald-700 to-teal-800 py-16 md:py-24 dark:from-green-900 dark:via-emerald-900 dark:to-teal-900">
+          {/* Aceternity Spotlight Effect */}
+          <Spotlight
+            className="-top-40 left-0 md:left-60 md:-top-20"
+            fill="rgba(16, 185, 129, 0.3)"
+          />
+          {/* Background Beams for modern effect */}
+          <BackgroundBeams className="opacity-40" />
+          
           {/* Floating elements for enhanced visual appeal */}
           <FloatingElement delay={0} className="absolute top-1/4 left-1/4">
             <PulsingOrb size={120} color="bg-green-400/30" />
@@ -427,11 +471,11 @@ const Index = () => {
             <HealthUpdatesTicker />
           </section>
 
-          {/* Quick Actions */}
+          {/* Quick Actions with Aceternity HoverEffect */}
           <section aria-labelledby="quick-actions-heading">
             <motion.h3 
               id="quick-actions-heading"
-              className="text-2xl font-bold mb-6 flex items-center text-foreground"
+              className="text-2xl font-bold mb-2 flex items-center text-foreground"
               initial={{ opacity: 0, x: -20 }}
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
@@ -440,46 +484,16 @@ const Index = () => {
               <Zap className="w-6 h-6 mr-2 text-yellow-500" />
               Quick Actions
             </motion.h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {quickActions.map((action, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                  whileHover={{ y: -5, scale: 1.02 }}
-                  className="h-full"
-                >
-                  <Link 
-                    to={action.href}
-                    aria-label={`Go to ${action.title}`}
-                  >
-                    <Card className="h-full bg-card hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer group rounded-2xl border overflow-hidden">
-                      <div className={`h-2 bg-gradient-to-r ${action.color}`}></div>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className={`p-3 rounded-xl bg-gradient-to-r ${action.color} text-white shadow-lg`}>
-                            <action.icon className="w-6 h-6" />
-                          </div>
-                          {action.urgent && (
-                            <Badge variant="destructive" className="animate-pulse">Urgent</Badge>
-                          )}
-                        </div>
-                        <h4 className="text-xl font-semibold text-foreground group-hover:text-primary transition-colors mb-2">
-                          {action.title}
-                        </h4>
-                        <p className="text-muted-foreground mb-4">{action.description}</p>
-                        <div className="flex items-center text-primary font-medium">
-                          Explore
-                          <ChevronRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                </motion.div>
-              ))}
-            </div>
+            <HoverEffect
+              items={quickActions.map((action) => ({
+                title: action.title,
+                description: action.description,
+                icon: <action.icon className="w-6 h-6" />,
+                link: action.href,
+                onClick: () => window.location.href = action.href,
+              }))}
+              className="gap-4"
+            />
           </section>
 
           {/* Daily Health Insight */}
@@ -511,7 +525,7 @@ const Index = () => {
               </motion.p>
             </div>
             
-            {/* Health Metrics Cards - Only section now, old cards removed */}
+            {/* Health Metrics Cards with SpotlightCard effect */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {healthMetrics.map((metric, index) => (
                 <motion.div
@@ -526,21 +540,89 @@ const Index = () => {
                     stiffness: 100
                   }}
                 >
-                  <HealthMetricCard
-                    title={metric.title}
-                    value={metric.value}
-                    icon={metric.icon}
-                    trend={metric.trend}
-                    trendDirection={metric.trendDirection}
-                    color={metric.color}
-                    className="h-full"
-                  />
-                  <p className="text-center text-muted-foreground mt-3 text-sm">
-                    {metric.description}
-                  </p>
+                  <SpotlightCard className="h-full" spotlightColor="rgba(16, 185, 129, 0.15)">
+                    <HealthMetricCard
+                      title={metric.title}
+                      value={metric.value}
+                      icon={metric.icon}
+                      trend={metric.trend}
+                      trendDirection={metric.trendDirection}
+                      color={metric.color}
+                      className="border-0 shadow-none bg-transparent"
+                    />
+                    <p className="text-center text-muted-foreground mt-3 text-sm">
+                      {metric.description}
+                    </p>
+                  </SpotlightCard>
                 </motion.div>
               ))}
             </div>
+          </section>
+
+          {/* Testimonials Section with Infinite Moving Cards */}
+          <section className="py-12" aria-labelledby="testimonials-heading">
+            <div className="text-center mb-8">
+              <motion.h2 
+                id="testimonials-heading"
+                className="text-3xl md:text-4xl font-bold text-foreground mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+              >
+                <TextGenerateEffect words="What Our Users Say" className="text-3xl md:text-4xl" />
+              </motion.h2>
+              <motion.p 
+                className="text-lg text-muted-foreground max-w-2xl mx-auto"
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              >
+                Join thousands of satisfied users who trust HealerAi for their health journey
+              </motion.p>
+            </div>
+            <InfiniteMovingCards
+              items={testimonials}
+              direction="right"
+              speed="slow"
+              pauseOnHover={true}
+              className="py-4"
+            />
+          </section>
+
+          {/* CTA Section with Moving Border Button */}
+          <section className="py-16 text-center">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="max-w-3xl mx-auto"
+            >
+              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
+                Ready to Transform Your Health Journey?
+              </h2>
+              <p className="text-lg text-muted-foreground mb-8">
+                Start using HealerAi today and take control of your wellness with AI-powered insights and personalized recommendations.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link to="/symptoms">
+                  <MovingBorderButton
+                    duration={3000}
+                    className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold px-8 py-4"
+                  >
+                    Get Started Free
+                  </MovingBorderButton>
+                </Link>
+                <Link to="/education">
+                  <Button variant="outline" size="lg" className="rounded-full px-8">
+                    Learn More
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
           </section>
         </main>
       </div>
