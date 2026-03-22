@@ -1,12 +1,18 @@
 /**
- * Shared Gemini helper — calls the backend proxy at /api/gemini
- * so the API key stays on the server and is never exposed to the browser.
+ * Shared Gemini helper.
+ *
+ * In development the Vite middleware at /api/gemini handles requests.
+ * In production (Vercel) set VITE_API_BASE_URL to your Render backend URL,
+ * e.g. https://healerai-backend.onrender.com — then all calls go there instead.
  */
-export async function callGemini(prompt: string): Promise<string> {
-  const res = await fetch("/api/gemini", {
+const API_BASE =
+  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
+
+export async function callGemini(prompt: string, imageBase64?: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/api/gemini`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, ...(imageBase64 ? { imageBase64 } : {}) }),
   });
 
   if (!res.ok) {

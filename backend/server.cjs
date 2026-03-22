@@ -7,22 +7,31 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyC1FbrqKHMkS18alFf0Jv
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CORS configuration to allow requests from localhost and Vercel
+// Allow all origins in development; in production accept localhost + *.vercel.app + *.onrender.com
 const corsOptions = {
-  origin: [
-    'http://localhost:8080',
-    'http://localhost:5173',
-    'http://127.0.0.1:8080',
-    'http://127.0.0.1:5173',
-    'https://healer--ai.vercel.app',
-    'https://healer--ai-git-*.vercel.app' // For preview deployments
-  ],
-  optionsSuccessStatus: 200
+  origin: (origin, callback) => {
+    // Allow server-to-server calls (no origin), localhost, Vercel and Render deployments
+    if (
+      !origin ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1') ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.onrender.com')
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    }
+  },
+  optionsSuccessStatus: 200,
 };
 
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// Health check — used by Render
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 // Function to calculate distance between two coordinates using Haversine formula
 function calculateDistance(lat1, lon1, lat2, lon2) {
