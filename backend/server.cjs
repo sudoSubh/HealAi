@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyC1FbrqKHMkS18alFf0JvSXImNdDWkyGMs";
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -39,6 +41,50 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 function deg2rad(deg) {
   return deg * (Math.PI / 180);
 }
+
+// ─── Gemini proxy ────────────────────────────────────────────────────────────
+// All Gemini calls from the frontend are routed here so the API key is never
+// exposed to the browser and Google's origin restrictions are not triggered.
+app.post('/api/gemini', async (req, res) => {
+  const { prompt, imageBase64 } = req.body;
+  if (!prompt || typeof prompt !== 'string') {
+    return res.status(400).json({ error: 'prompt is required' });
+  }
+
+  // Build the Gemini request — support optional image (vision) calls
+  const parts = [];
+  if (imageBase64 && typeof imageBase64 === 'string') {
+    parts.push({ inlineData: { data: imageBase64, mimeType: 'image/jpeg' } });
+  }
+  parts.push({ text: prompt });
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('[gemini proxy] upstream error', response.status, errText);
+      return res.status(response.status).json({ error: errText });
+    }
+
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    return res.json({ text });
+  } catch (err) {
+    console.error('[gemini proxy] fetch error', err);
+    return res.status(500).json({ error: 'Internal error calling Gemini' });
+  }
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Google Places API proxy endpoint
 app.get('/api/google-places', async (req, res) => {

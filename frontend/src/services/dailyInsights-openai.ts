@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { callGemini } from "./gemini";
 
 export interface DailyInsight {
   title: string;
@@ -8,17 +8,10 @@ export interface DailyInsight {
   motivation: string;
 }
 
-const GEMINI_API_KEY = "AIzaSyC1FbrqKHMkS18alFf0JvSXImNdDWkyGMs";
-
-const getGeminiClient = () => {
-  return new GoogleGenerativeAI(GEMINI_API_KEY);
-};
-
 export async function generateDailyInsight(
   forceNew: boolean = false,
   location?: { city?: string | null; region?: string | null; country?: string | null }
 ): Promise<DailyInsight> {
-  // Build a location-specific cache key so each location gets its own cached insight
   const locationKey = [location?.city, location?.region, location?.country]
     .filter(Boolean)
     .join("-")
@@ -35,9 +28,7 @@ export async function generateDailyInsight(
         if (Date.now() - timestamp < oneDay) {
           return insight;
         }
-      } catch {
-        // ignore parse error
-      }
+      } catch { /* ignore */ }
     }
   }
 
@@ -53,9 +44,6 @@ export async function generateDailyInsight(
 async function generateInsightWithGemini(
   location?: { city?: string | null; region?: string | null; country?: string | null }
 ): Promise<DailyInsight> {
-  const client = getGeminiClient();
-  const model = client.getGenerativeModel({ model: "gemini-2.0-flash" });
-
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
   const locationStr =
     location?.city || location?.region || location?.country
@@ -68,16 +56,13 @@ Return ONLY a JSON object with these exact keys: title, content, category, tips 
 Make it specific to today — mention the day, season, or local health concerns if relevant.
 Category must be one of: Nutrition, Exercise, Mental Health, Sleep, Prevention, General Health.
 Do not include any markdown, code blocks, or extra text.
-
 Example:
 {"title":"...","content":"...","category":"Nutrition","tips":["...","..."],"motivation":"..."}`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+  const text = await callGemini(prompt);
   const jsonStart = text.indexOf("{");
   const jsonEnd = text.lastIndexOf("}") + 1;
-  const jsonString = text.substring(jsonStart, jsonEnd);
-  const insightData = JSON.parse(jsonString);
+  const insightData = JSON.parse(text.substring(jsonStart, jsonEnd));
 
   if (
     insightData.title &&

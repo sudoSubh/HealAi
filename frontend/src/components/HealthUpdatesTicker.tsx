@@ -10,9 +10,7 @@ import {
   Play,
   RefreshCw,
 } from "lucide-react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const GEMINI_API_KEY = "AIzaSyC1FbrqKHMkS18alFf0JvSXImNdDWkyGMs";
+import { callGemini } from "@/services/gemini";
 
 interface HealthUpdate {
   id: string;
@@ -30,9 +28,6 @@ interface HealthUpdate {
 async function fetchGeminiHealthUpdates(
   location?: { city?: string | null; region?: string | null; country?: string | null }
 ): Promise<HealthUpdate[]> {
-  const client = new GoogleGenerativeAI(GEMINI_API_KEY);
-  const model = client.getGenerativeModel({ model: "gemini-2.0-flash" });
-
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const locationStr =
     location?.city || location?.region || location?.country
@@ -45,13 +40,11 @@ id (string), title (string), summary (string 1-2 sentences), source (string), pu
 Make the updates relevant to today's date, current season, and the location if given. Include a mix of local disease alerts, wellness campaigns, and health advisories.
 Return ONLY the raw JSON array starting with [ and ending with ].`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+  const text = await callGemini(prompt);
   const jsonStart = text.indexOf("[");
   const jsonEnd = text.lastIndexOf("]") + 1;
   const jsonString = text.substring(jsonStart, jsonEnd);
-  const updates: HealthUpdate[] = JSON.parse(jsonString);
-  return updates;
+  return JSON.parse(jsonString) as HealthUpdate[];
 }
 
 const FALLBACK_HEALTH_UPDATES: HealthUpdate[] = [

@@ -13,9 +13,7 @@ import {
   Loader2,
   CheckCircle2,
 } from "lucide-react";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const GEMINI_API_KEY = "AIzaSyC1FbrqKHMkS18alFf0JvSXImNdDWkyGMs";
+import { callGemini } from "@/services/gemini";
 
 interface GeminiAlert {
   id: string;
@@ -43,8 +41,6 @@ interface GeminiAlertsResponse {
 }
 
 async function generateAlertsWithGemini(locationStr: string): Promise<GeminiAlertsResponse> {
-  const client = new GoogleGenerativeAI(GEMINI_API_KEY);
-  const model = client.getGenerativeModel({ model: "gemini-2.0-flash" });
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
   });
@@ -85,8 +81,7 @@ Rules:
 - type must be one of: advisory, update, emergency, awareness
 - Start with { and end with }. No other text.`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
+  const text = await callGemini(prompt);
   const jsonStart = text.indexOf("{");
   const jsonEnd = text.lastIndexOf("}") + 1;
   if (jsonStart === -1 || jsonEnd === 0) throw new Error("No JSON in response");
