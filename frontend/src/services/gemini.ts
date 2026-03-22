@@ -1,6 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const GEMINI_API_KEY = "AIzaSyC1FbrqKHMkS18alFf0JvSXImNdDWkyGMs";
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+
+if (!GEMINI_API_KEY) {
+  console.warn("[v0] VITE_GEMINI_API_KEY environment variable is not set");
+}
+
 const client = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 export async function callGemini(prompt: string, imageBase64?: string): Promise<string> {

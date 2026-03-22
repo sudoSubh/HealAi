@@ -2,5 +2,8 @@
   "name": "healerai",
   "version": "1.0.0",
   "description": "HealerAI - Health Navigation Platform",
-  "private": true
+  "private": true,
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1"
+  }
 }
