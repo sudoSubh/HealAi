@@ -1,25 +1,34 @@
-/**
- * Shared Gemini helper.
- *
- * In development the Vite middleware at /api/gemini handles requests.
- * In production (Vercel) set VITE_API_BASE_URL to your Render backend URL,
- * e.g. https://healerai-backend.onrender.com — then all calls go there instead.
- */
-const API_BASE =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-export async function callGemini(prompt: string, imageBase64?: string): Promise<string> {
-  const res = await fetch(`${API_BASE}/api/gemini`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt, ...(imageBase64 ? { imageBase64 } : {}) }),
-  });
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Gemini proxy error ${res.status}: ${text}`);
+if (!GEMINI_API_KEY) {
+  console.warn("[v0] VITE_GEMINI_API_KEY environment variable is not set");
+}
+
+const client = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+export async function callGemini(
+  prompt: string,
+  imageBase64?: string,
+  mimeType = "image/jpeg"
+): Promise<string> {
+  try {
+    const model = client.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+    const parts: any[] = [];
+    if (imageBase64 && typeof imageBase64 === "string") {
+      parts.push({ inlineData: { data: imageBase64, mimeType } });
+    }
+    parts.push({ text: prompt });
+
+    const result = await model.generateContent({ contents: [{ parts, role: "user" }] });
+    const response = await result.response;
+    const text = response.text();
+
+    return text;
+  } catch (err) {
+    console.error("[v0] Gemini error:", err);
+    throw err;
   }
-
-  const data = await res.json();
-  return data.text as string;
 }

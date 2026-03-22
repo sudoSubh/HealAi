@@ -1,28 +1,12 @@
 {
-  "name": "healerai-backend",
+  "name": "healerai",
   "version": "1.0.0",
-  "description": "Backend for HealerAI health navigation platform",
-  "main": "server.cjs",
+  "description": "HealerAI - Health Navigation Platform",
+  "private": true,
   "scripts": {
-    "start": "node server.cjs",
-    "dev": "nodemon server.cjs"
-  },
-  "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "@tailwindcss/typography": "^0.5.19",
-    "@vitejs/plugin-react-swc": "^4.3.0",
-    "cors": "^2.8.5",
-    "express": "^4.21.1",
-    "framer-motion": "^12.38.0",
-    "lovable-tagger": "^1.1.13",
-    "lucide-react": "^0.577.0",
-    "react": "^19.2.4",
-    "react-router-dom": "^7.13.1",
-    "tailwindcss": "^4.2.2",
-    "tailwindcss-animate": "^1.0.7",
-    "vite": "^8.0.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
+    "start": "cd frontend && npm run dev",
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "install": "cd frontend && npm install"
   }
 }

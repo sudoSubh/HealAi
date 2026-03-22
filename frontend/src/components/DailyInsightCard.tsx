@@ -50,11 +50,11 @@ export function DailyInsightCard({ location }: DailyInsightCardProps) {
 
   if (loading) {
     return (
-      <Card className="bg-card border shadow-lg rounded-2xl overflow-hidden h-full">
-        <div className="h-2 bg-gradient-to-r from-primary to-emerald-500" />
+      <Card className="bg-gradient-to-br from-teal-50/50 to-emerald-50/30 dark:from-teal-900/20 dark:to-emerald-900/10 border-teal-200/50 dark:border-teal-800/30 shadow-lg rounded-2xl overflow-hidden h-full">
+        <div className="h-2 bg-gradient-to-r from-teal-500 to-emerald-600" />
         <CardHeader>
           <CardTitle className="flex items-center text-foreground">
-            <Lightbulb className="w-5 h-5 mr-2 text-primary" />
+            <Lightbulb className="w-5 h-5 mr-2 text-teal-600 dark:text-teal-400" />
             Daily Health Insight
           </CardTitle>
           <CardDescription>
@@ -65,7 +65,7 @@ export function DailyInsightCard({ location }: DailyInsightCardProps) {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-32">
-            <HeartAnimation size={32} className="text-primary" />
+            <HeartAnimation size={32} className="text-teal-500" />
           </div>
         </CardContent>
       </Card>
@@ -74,11 +74,11 @@ export function DailyInsightCard({ location }: DailyInsightCardProps) {
 
   if (error) {
     return (
-      <Card className="bg-card border shadow-lg rounded-2xl overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-primary to-emerald-500" />
+      <Card className="bg-gradient-to-br from-teal-50/50 to-emerald-50/30 dark:from-teal-900/20 dark:to-emerald-900/10 border-teal-200/50 dark:border-teal-800/30 shadow-lg rounded-2xl overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-teal-500 to-emerald-600" />
         <CardHeader>
           <CardTitle className="flex items-center text-foreground">
-            <Lightbulb className="w-5 h-5 mr-2 text-primary" />
+            <Lightbulb className="w-5 h-5 mr-2 text-teal-600 dark:text-teal-400" />
             Daily Health Insight
           </CardTitle>
         </CardHeader>
@@ -98,28 +98,28 @@ export function DailyInsightCard({ location }: DailyInsightCardProps) {
   const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
-    <Card className="bg-card border shadow-lg rounded-2xl overflow-hidden h-full">
-      <div className="h-2 bg-gradient-to-r from-primary to-emerald-500" />
+    <Card className="bg-gradient-to-br from-teal-50/50 to-emerald-50/30 dark:from-teal-900/20 dark:to-emerald-900/10 border-teal-200/50 dark:border-teal-800/30 shadow-lg rounded-2xl overflow-hidden h-full">
+      <div className="h-2 bg-gradient-to-r from-teal-500 to-emerald-600" />
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center text-foreground">
-            <Lightbulb className="w-5 h-5 mr-2 text-primary" />
+            <Lightbulb className="w-5 h-5 mr-2 text-teal-600 dark:text-teal-400" />
             Daily Health Insight
           </CardTitle>
           <Button
             onClick={() => fetchInsight(true)}
             variant="ghost"
             size="sm"
-            className="rounded-full hover:bg-muted"
+            className="rounded-full hover:bg-teal-100 dark:hover:bg-teal-900/30"
             title="Refresh insight"
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4 text-teal-600 dark:text-teal-400" />
           </Button>
         </div>
         <CardDescription className="flex flex-col gap-1">
           <span>{today}</span>
           {location?.city && (
-            <span className="flex items-center gap-1 text-xs text-primary">
+            <span className="flex items-center gap-1 text-xs text-teal-600 dark:text-teal-400">
               <MapPin className="w-3 h-3" />
               {[location.city, location.region, location.country].filter(Boolean).join(", ")}
             </span>
@@ -128,28 +128,28 @@ export function DailyInsightCard({ location }: DailyInsightCardProps) {
       </CardHeader>
       <CardContent>
         <div className="mb-4">
-          <Badge className={`${categoryColors[insight.category] || "bg-muted"} rounded-full`}>
+          <Badge className={`${categoryColors[insight.category] || "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200"} rounded-full`}>
             {insight.category}
           </Badge>
         </div>
         <h3 className="text-xl font-semibold text-foreground mb-2">{insight.title}</h3>
-        <p className="text-muted-foreground mb-4">{insight.content}</p>
+        <p className="text-muted-foreground mb-4 leading-relaxed">{insight.content}</p>
 
         <div className="space-y-2 mb-4">
-          <h4 className="font-medium text-foreground">Actionable Tips:</h4>
-          <ul className="space-y-1">
+          <h4 className="font-medium text-foreground text-sm">Actionable Tips:</h4>
+          <ul className="space-y-1.5">
             {insight.tips.map((tip, index) => (
-              <li key={index} className="flex items-start">
-                <span className="text-primary mr-2">•</span>
-                <span className="text-muted-foreground">{tip}</span>
+              <li key={index} className="flex items-start gap-2">
+                <span className="text-teal-600 dark:text-teal-400 font-bold mt-0.5">•</span>
+                <span className="text-muted-foreground text-sm">{tip}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
-          <p className="text-primary font-medium flex items-center">
-            <Heart className="w-4 h-4 mr-2 flex-shrink-0" />
+        <div className="p-3 bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-900/30 dark:to-emerald-900/20 rounded-lg border border-teal-200/50 dark:border-teal-800/30">
+          <p className="text-teal-700 dark:text-teal-300 font-medium flex items-center text-sm">
+            <Heart className="w-4 h-4 mr-2 flex-shrink-0 text-teal-600 dark:text-teal-400" />
             {insight.motivation}
           </p>
         </div>
