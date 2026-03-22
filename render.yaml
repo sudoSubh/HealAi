@@ -3,7 +3,7 @@ services:
     name: healerai-backend
     runtime: node
     rootDir: backend
-    buildCommand: npm install
+    buildCommand: npm install --production
     startCommand: node server.cjs
     envVars:
       - key: NODE_ENV
