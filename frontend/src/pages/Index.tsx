@@ -1,631 +1,677 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   Activity, 
   Bot, 
   BookOpen, 
-  Search, 
   Heart, 
   Brain, 
-  Apple, 
-  Dumbbell,
-  Calendar,
-  TrendingUp,
-  MessageCircle,
-  FileText,
-  Settings,
-  Menu,
-  X,
   ChevronRight,
   Stethoscope,
   Shield,
   Zap,
-  Bell,
-  Award,
-  Star,
   MapPin,
   Play,
   Sparkles,
-  ChevronLeft,
-  Droplets,
+  Clock,
+  Users,
+  CheckCircle2,
+  ArrowRight,
+  Sun,
   Moon,
-  Target
+  Menu,
+  X
 } from "lucide-react";
-import { LottieAnimation } from "@/components/LottieAnimation";
 import { ModeToggle } from "@/components/mode-toggle";
-import { HeartAnimation } from "@/components/HeartAnimation";
-import { DailyInsightCard } from "@/components/DailyInsightCard";
-import { HealthUpdatesTicker } from "@/components/HealthUpdatesTicker";
-// Removed LocationBasedHealthNews import since we're simplifying the UI
-import { GoogleTranslate } from "@/components/GoogleTranslate";
-import aiHealthAnimation from "../../public/animations/ai-health-animation.json";
-// Import new components
-import { GradientButton } from "@/components/ui/gradient-button";
-import { FloatingElement, PulsingOrb } from "@/components/ui/floating-elements";
-import { HeroSection } from "@/components/HeroSection";
-import { HealthMetricCard } from "@/components/ui/health-metrics-card";
-// Aceternity UI Components
-import { Spotlight, SpotlightCard } from "@/components/aceternity/spotlight";
-import { BackgroundBeams } from "@/components/aceternity/background-beams";
-import { HoverEffect } from "@/components/aceternity/hover-effect";
-import { TextGenerateEffect } from "@/components/aceternity/text-generate-effect";
-import { InfiniteMovingCards } from "@/components/aceternity/infinite-moving-cards";
-import { MovingBorderButton } from "@/components/aceternity/moving-border";
+import { cn } from "@/lib/utils";
+
+// Typewriter effect hook
+const useTypewriter = (words: string[], typingSpeed = 100, deletingSpeed = 50, pauseTime = 2000) => {
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [currentText, setCurrentText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const word = words[currentWordIndex];
+    
+    const timeout = setTimeout(() => {
+      if (!isDeleting) {
+        if (currentText.length < word.length) {
+          setCurrentText(word.slice(0, currentText.length + 1));
+        } else {
+          setTimeout(() => setIsDeleting(true), pauseTime);
+        }
+      } else {
+        if (currentText.length > 0) {
+          setCurrentText(currentText.slice(0, -1));
+        } else {
+          setIsDeleting(false);
+          setCurrentWordIndex((prev) => (prev + 1) % words.length);
+        }
+      }
+    }, isDeleting ? deletingSpeed : typingSpeed);
+
+    return () => clearTimeout(timeout);
+  }, [currentText, isDeleting, currentWordIndex, words, typingSpeed, deletingSpeed, pauseTime]);
+
+  return currentText;
+};
+
+// Floating Stat Card Component
+const FloatingStatCard = ({ 
+  stat, 
+  label, 
+  delay, 
+  position 
+}: { 
+  stat: string; 
+  label: string; 
+  delay: number; 
+  position: string;
+}) => (
+  <motion.div
+    className={cn(
+      "absolute hidden lg:flex items-center gap-3 px-5 py-3 rounded-2xl",
+      "bg-white/90 dark:bg-slate-800/90 backdrop-blur-xl",
+      "border border-white/20 dark:border-slate-700/50",
+      "shadow-[0_8px_32px_rgba(0,0,0,0.08)]",
+      position
+    )}
+    initial={{ opacity: 0, y: 20, scale: 0.9 }}
+    animate={{ 
+      opacity: 1, 
+      y: [0, -8, 0], 
+      scale: 1,
+    }}
+    transition={{ 
+      opacity: { delay, duration: 0.6 },
+      y: { delay: delay + 0.5, duration: 3, repeat: Infinity, ease: "easeInOut" },
+      scale: { delay, duration: 0.6 }
+    }}
+  >
+    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center">
+      <CheckCircle2 className="w-5 h-5 text-white" />
+    </div>
+    <div>
+      <p className="text-lg font-bold text-slate-800 dark:text-white">{stat}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+    </div>
+  </motion.div>
+);
+
+// Particle Background Component
+const ParticleBackground = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    {[...Array(30)].map((_, i) => (
+      <motion.div
+        key={i}
+        className="absolute w-2 h-2 rounded-full bg-teal-500/[0.08]"
+        style={{
+          left: `${Math.random() * 100}%`,
+          top: `${Math.random() * 100}%`,
+        }}
+        animate={{
+          y: [0, -30, 0],
+          x: [0, Math.random() * 20 - 10, 0],
+          opacity: [0.08, 0.15, 0.08],
+        }}
+        transition={{
+          duration: 4 + Math.random() * 4,
+          repeat: Infinity,
+          delay: Math.random() * 2,
+          ease: "easeInOut",
+        }}
+      />
+    ))}
+  </div>
+);
+
+// Gradient Mesh Background
+const GradientMeshBackground = () => (
+  <div className="absolute inset-0 overflow-hidden">
+    <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-gradient-to-br from-teal-400/20 via-transparent to-transparent rounded-full blur-3xl animate-pulse" />
+    <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-gradient-to-tl from-emerald-400/20 via-transparent to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }} />
+    <div className="absolute top-1/4 right-1/4 w-96 h-96 bg-gradient-to-br from-teal-300/10 to-emerald-300/10 rounded-full blur-3xl" />
+  </div>
+);
+
+// Feature Card Component
+const FeatureCard = ({ 
+  icon: Icon, 
+  title, 
+  description, 
+  href, 
+  gradient,
+  delay 
+}: { 
+  icon: React.ElementType; 
+  title: string; 
+  description: string; 
+  href: string;
+  gradient: string;
+  delay: number;
+}) => (
+  <motion.div
+    initial={{ opacity: 0, y: 30 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    viewport={{ once: true }}
+    transition={{ duration: 0.5, delay }}
+  >
+    <Link to={href}>
+      <div className={cn(
+        "group relative p-6 rounded-2xl h-full",
+        "bg-white dark:bg-slate-800/50",
+        "border border-slate-200/50 dark:border-slate-700/50",
+        "shadow-[0_1px_3px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.08)]",
+        "hover:shadow-[0_1px_3px_rgba(0,0,0,0.06),0_16px_48px_rgba(0,0,0,0.12)]",
+        "transition-all duration-300 ease-out",
+        "hover:-translate-y-2"
+      )}>
+        <div className={cn(
+          "w-14 h-14 rounded-2xl flex items-center justify-center mb-5",
+          "bg-gradient-to-br", gradient
+        )}>
+          <Icon className="w-7 h-7 text-white" />
+        </div>
+        <h3 className="text-xl font-semibold text-slate-800 dark:text-white mb-2 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+          {title}
+        </h3>
+        <p className="text-slate-600 dark:text-slate-400 text-sm leading-relaxed mb-4">
+          {description}
+        </p>
+        <div className="flex items-center text-teal-600 dark:text-teal-400 text-sm font-medium">
+          Explore
+          <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+        </div>
+      </div>
+    </Link>
+  </motion.div>
+);
 
 const Index = () => {
-  const location = useLocation();
-  const currentPath = location.pathname;
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
-  console.log("DEBUG_LOTTIE:", typeof aiHealthAnimation, aiHealthAnimation);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const typewriterText = useTypewriter([
+    "AI Symptom Checker",
+    "24/7 Medical Chatbot", 
+    "Nearby Clinics",
+    "Health Education"
+  ], 80, 40, 2000);
 
-  // Add type annotation for the map functions
-  const quickActions: Array<{
-    title: string;
-    description: string;
-    icon: React.FC<React.SVGProps<SVGSVGElement>>;
-    href: string;
-    color: string;
-    urgent?: boolean;
-  }> = [
+  const features = [
     {
-      title: "Symptom Checker",
-      description: "AI-powered symptom analysis",
       icon: Stethoscope,
+      title: "AI Symptom Checker",
+      description: "Advanced AI-powered analysis to understand your symptoms and get personalized health insights.",
       href: "/symptoms",
-      color: "from-green-500 to-emerald-600",
-      urgent: true
+      gradient: "from-teal-500 to-emerald-500"
     },
     {
-      title: "Medical Bot",
-      description: "Chat with AI health assistant",
       icon: Bot,
+      title: "Medical Chatbot",
+      description: "24/7 AI health assistant ready to answer your medical questions with evidence-based responses.",
       href: "/medical-bot",
-      color: "from-green-600 to-teal-700"
+      gradient: "from-emerald-500 to-teal-600"
     },
     {
-      title: "Health Hub",
-      description: "Watch health videos and courses",
-      icon: Play,
-      href: "/health-hub",
-      color: "from-emerald-500 to-green-600"
-    },
-    {
-      title: "Education Hub",
-      description: "Learn about health topics",
       icon: BookOpen,
+      title: "Health Education",
+      description: "Curated articles, videos, and resources to help you make informed health decisions.",
       href: "/education",
-      color: "from-emerald-500 to-green-600"
+      gradient: "from-teal-600 to-cyan-500"
     },
     {
-      title: "Recent Health Updates",
-      description: "View latest health news and alerts",
-      icon: Sparkles,
-      href: "/test-health-news",
-      color: "from-emerald-500 to-teal-600"
-    },
-
-  ];
-
-  // Testimonials data for infinite moving cards
-  const testimonials = [
-    {
-      quote: "HealerAi helped me understand my symptoms before my doctor's appointment. The AI analysis was incredibly accurate and gave me peace of mind.",
-      name: "Sarah Johnson",
-      title: "Healthcare Professional"
-    },
-    {
-      quote: "The medical chatbot is like having a knowledgeable friend available 24/7. It's been invaluable for quick health questions.",
-      name: "Michael Chen",
-      title: "Software Engineer"
-    },
-    {
-      quote: "I love the health education videos. They've helped me make better lifestyle choices for my family's wellbeing.",
-      name: "Emily Rodriguez",
-      title: "Mother of Two"
-    },
-    {
-      quote: "Finding nearby healthcare resources used to be a hassle. Now with HealerAi, I can locate specialists in seconds.",
-      name: "David Thompson",
-      title: "Retired Teacher"
-    },
-    {
-      quote: "The personalized health insights have transformed how I approach my wellness routine. Highly recommend!",
-      name: "Lisa Park",
-      title: "Fitness Instructor"
-    }
-  ];
-
-  // Add health metrics for the Why Choose HealerAi section
-  const healthMetrics = [
-    {
-      title: "Personalized Insights",
-      value: "AI-Powered",
-      icon: Brain,
-      trend: "95% Accuracy",
-      trendDirection: "up" as const,
-      color: "text-blue-500",
-      description: "Get tailored health recommendations based on your unique profile"
-    },
-    {
-      title: "24/7 Support",
-      value: "Always Available",
-      icon: Bot,
-      trend: "100% Uptime",
-      trendDirection: "up" as const,
-      color: "text-green-500",
-      description: "Access to AI health assistant anytime, anywhere"
-    },
-    {
-      title: "Smart Notifications",
-      value: "Personalized Alerts",
-      icon: Bell,
-      trend: "Opt-in",
-      trendDirection: "stable" as const,
-      color: "text-yellow-500",
-      description: "Stay on top of your health with tailored reminders and alerts"
-    },
-    {
-      title: "Resource Locator",
-      value: "5000+ Centers",
       icon: MapPin,
-      trend: "Nationwide",
-      trendDirection: "stable" as const,
-      color: "text-teal-500",
-      description: "Find nearby healthcare services and specialists"
+      title: "Find Clinics",
+      description: "Locate nearby healthcare facilities, specialists, and emergency services in your area.",
+      href: "/resources",
+      gradient: "from-cyan-500 to-teal-500"
+    },
+    {
+      icon: Play,
+      title: "Health Hub",
+      description: "Watch curated health videos and wellness courses from trusted medical professionals.",
+      href: "/health-hub",
+      gradient: "from-emerald-600 to-green-500"
+    },
+    {
+      icon: Shield,
+      title: "Trusted Resources",
+      description: "Access verified health information from government and medical institutions.",
+      href: "/resources",
+      gradient: "from-teal-500 to-emerald-600"
     }
+  ];
+
+  const stats = [
+    { value: "10M+", label: "Health Consultations" },
+    { value: "150+", label: "Conditions Covered" },
+    { value: "24/7", label: "Always Available" },
+    { value: "98%", label: "User Satisfaction" }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="lg:hidden"
-              onClick={() => setSidebarOpen(true)}
-              aria-label="Toggle menu"
-            >
-              <Menu className="h-5 w-5" />
-              <span className="sr-only">Toggle menu</span>
-            </Button>
-            <div className="flex items-center">
-              <HeartAnimation className="mr-3" size={32} />
-              <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-emerald-600 bg-clip-text text-transparent">
-                HealerAi
-              </h1>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <GoogleTranslate />
-            <ModeToggle />
-            <Button variant="ghost" size="icon" aria-label="Settings">
-              <Settings className="h-5 w-5" />
-            </Button>
-            <Avatar>
-              <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
-              <AvatarFallback>CN</AvatarFallback>
-            </Avatar>
-          </div>
-        </div>
-      </header>
-      
-      {/* Mobile Sidebar Overlay */}
-      {sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-          aria-hidden="true"
-        />
-      )}
+    <div className="min-h-screen bg-[#FAFAF7] dark:bg-[#0A0F0E]">
+      {/* Glassmorphism Navbar */}
+      <header className="fixed top-0 left-0 right-0 z-50">
+        <nav className={cn(
+          "mx-4 mt-4 px-6 py-3 rounded-full",
+          "bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl",
+          "border border-white/20 dark:border-slate-800/50",
+          "shadow-[0_1px_3px_rgba(0,0,0,0.06),0_8px_24px_rgba(0,0,0,0.08)]"
+        )}>
+          <div className="max-w-7xl mx-auto flex items-center justify-between">
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center">
+                <Heart className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-slate-800 dark:text-white">
+                Heal<span className="text-teal-600 dark:text-teal-400">AI</span>
+              </span>
+            </Link>
 
-      {/* Sidebar */}
-      <div className={`fixed left-0 top-16 h-[calc(100vh-4rem)] bg-gradient-to-b from-background to-muted/40 backdrop-blur-sm border-r shadow-xl rounded-r-2xl transform transition-all duration-300 ease-in-out z-50 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } lg:translate-x-0 ${sidebarCollapsed ? 'w-20' : 'w-64'}`}>
-        {/* Collapse/Expand Button */}
-        <div className="flex justify-end p-2">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="h-8 w-8"
-            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
-        </div>
-        
-        <nav className="px-2 space-y-2" aria-label="Main navigation">
-          <div className="px-3 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Overview
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-8">
+              <Link to="/symptoms" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
+                Symptoms
+              </Link>
+              <Link to="/medical-bot" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
+                AI Chat
+              </Link>
+              <Link to="/education" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
+                Education
+              </Link>
+              <Link to="/resources" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
+                Resources
+              </Link>
+            </div>
+
+            {/* Right Side */}
+            <div className="flex items-center gap-3">
+              <ModeToggle />
+              <Link to="/symptoms" className="hidden sm:block">
+                <Button 
+                  className={cn(
+                    "rounded-full px-6 font-semibold",
+                    "bg-gradient-to-r from-teal-500 to-emerald-500",
+                    "hover:from-teal-600 hover:to-emerald-600",
+                    "text-white shadow-lg shadow-teal-500/25",
+                    "transition-all duration-300"
+                  )}
+                >
+                  Get Started
+                </Button>
+              </Link>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="md:hidden"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </Button>
+            </div>
           </div>
-          <Link 
-            to="/symptoms" 
-            className={`relative flex items-center p-3 rounded-xl transition-all group ${
-              currentPath === '/symptoms'
-                ? 'bg-emerald-600/10 ring-1 ring-emerald-500/30 text-emerald-700 dark:text-emerald-300'
-                : 'hover:bg-emerald-600/10 text-emerald-700 dark:text-emerald-300'
-            }`}
-            aria-label="Symptom Checker"
-            title={sidebarCollapsed ? 'Symptom Checker' : undefined}
-          >
-            <span className={`absolute left-1 top-1/2 -translate-y-1/2 h-6 w-1 rounded-full transition-opacity ${currentPath === '/symptoms' ? 'bg-emerald-500 opacity-100' : 'opacity-0 group-hover:opacity-60 bg-emerald-400'}`}></span>
-            <div className={`${sidebarCollapsed ? '' : 'mr-3'} p-2 rounded-lg bg-gradient-to-br from-emerald-500/10 to-teal-500/10 group-hover:from-emerald-500/20 group-hover:to-teal-500/20 ${currentPath === '/symptoms' ? 'ring-1 ring-emerald-400/30' : ''}`}>
-              <Stethoscope className="w-5 h-5" />
-            </div>
-            {!sidebarCollapsed && (
-              <>
-                <span className="font-medium">Symptom Checker</span>
-                <Badge className="ml-auto bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300">Urgent</Badge>
-                <ChevronRight className="ml-2 w-4 h-4 opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0 text-emerald-500" />
-              </>
-            )}
-          </Link>
-          
-          <Link 
-            to="/medical-bot" 
-            className={`relative flex items-center p-3 rounded-xl transition-all group ${
-              currentPath === '/medical-bot'
-                ? 'bg-emerald-600/10 ring-1 ring-emerald-500/30 text-emerald-700 dark:text-emerald-300'
-                : 'hover:bg-emerald-600/10 text-emerald-700 dark:text-emerald-300'
-            }`}
-            aria-label="Medical Bot"
-            title={sidebarCollapsed ? 'Medical Bot' : undefined}
-          >
-            <span className={`absolute left-1 top-1/2 -translate-y-1/2 h-6 w-1 rounded-full transition-opacity ${currentPath === '/medical-bot' ? 'bg-emerald-500 opacity-100' : 'opacity-0 group-hover:opacity-60 bg-emerald-400'}`}></span>
-            <div className={`${sidebarCollapsed ? '' : 'mr-3'} p-2 rounded-lg bg-gradient-to-br from-emerald-500/10 to-teal-500/10 group-hover:from-emerald-500/20 group-hover:to-teal-500/20 ${currentPath === '/medical-bot' ? 'ring-1 ring-emerald-400/30' : ''}`}>
-              <Bot className="w-5 h-5" />
-            </div>
-            {!sidebarCollapsed && (
-              <>
-                <span className="font-medium">Medical Bot</span>
-                <ChevronRight className="ml-auto w-4 h-4 opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0 text-emerald-500" />
-              </>
-            )}
-          </Link>
-          
-          <Link 
-            to="/education" 
-            className={`relative flex items-center p-3 rounded-xl transition-all group ${
-              currentPath === '/education'
-                ? 'bg-emerald-600/10 ring-1 ring-emerald-500/30 text-emerald-700 dark:text-emerald-300'
-                : 'hover:bg-emerald-600/10 text-emerald-700 dark:text-emerald-300'
-            }`}
-            aria-label="Education"
-            title={sidebarCollapsed ? 'Education' : undefined}
-          >
-            <span className={`absolute left-1 top-1/2 -translate-y-1/2 h-6 w-1 rounded-full transition-opacity ${currentPath === '/education' ? 'bg-emerald-500 opacity-100' : 'opacity-0 group-hover:opacity-60 bg-emerald-400'}`}></span>
-            <div className={`${sidebarCollapsed ? '' : 'mr-3'} p-2 rounded-lg bg-gradient-to-br from-emerald-500/10 to-teal-500/10 group-hover:from-emerald-500/20 group-hover:to-teal-500/20 ${currentPath === '/education' ? 'ring-1 ring-emerald-400/30' : ''}`}>
-              <BookOpen className="w-5 h-5" />
-            </div>
-            {!sidebarCollapsed && (
-              <>
-                <span className="font-medium">Education</span>
-                <ChevronRight className="ml-auto w-4 h-4 opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0 text-emerald-500" />
-              </>
-            )}
-          </Link>
-          
-          <div className="mx-2 my-2 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
-          <div className="px-3 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Explore
-          </div>
-          <Link 
-            to="/health-hub" 
-            className={`relative flex items-center p-3 rounded-xl transition-all group ${
-              currentPath === '/health-hub'
-                ? 'bg-emerald-600/10 ring-1 ring-emerald-500/30 text-emerald-700 dark:text-emerald-300'
-                : 'hover:bg-emerald-600/10 text-emerald-700 dark:text-emerald-300'
-            }`}
-            aria-label="Health Hub"
-            title={sidebarCollapsed ? 'Health Hub' : undefined}
-          >
-            <span className={`absolute left-1 top-1/2 -translate-y-1/2 h-6 w-1 rounded-full transition-opacity ${currentPath === '/health-hub' ? 'bg-emerald-500 opacity-100' : 'opacity-0 group-hover:opacity-60 bg-emerald-400'}`}></span>
-            <div className={`${sidebarCollapsed ? '' : 'mr-3'} p-2 rounded-lg bg-gradient-to-br from-emerald-500/10 to-teal-500/10 group-hover:from-emerald-500/20 group-hover:to-teal-500/20 ${currentPath === '/health-hub' ? 'ring-1 ring-emerald-400/30' : ''}`}>
-              <Play className="w-5 h-5" />
-            </div>
-            {!sidebarCollapsed && (
-              <>
-                <span className="font-medium">Health Hub</span>
-                <ChevronRight className="ml-auto w-4 h-4 opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0 text-emerald-500" />
-              </>
-            )}
-          </Link>
-          
-          <Link 
-            to="/resources" 
-            className={`relative flex items-center p-3 rounded-xl transition-all group ${
-              currentPath === '/resources'
-                ? 'bg-emerald-600/10 ring-1 ring-emerald-500/30 text-emerald-700 dark:text-emerald-300'
-                : 'hover:bg-emerald-600/10 text-emerald-700 dark:text-emerald-300'
-            }`}
-            aria-label="Resources"
-            title={sidebarCollapsed ? 'Resources' : undefined}
-          >
-            <span className={`absolute left-1 top-1/2 -translate-y-1/2 h-6 w-1 rounded-full transition-opacity ${currentPath === '/resources' ? 'bg-emerald-500 opacity-100' : 'opacity-0 group-hover:opacity-60 bg-emerald-400'}`}></span>
-            <div className={`${sidebarCollapsed ? '' : 'mr-3'} p-2 rounded-lg bg-gradient-to-br from-emerald-500/10 to-teal-500/10 group-hover:from-emerald-500/20 group-hover:to-teal-500/20 ${currentPath === '/resources' ? 'ring-1 ring-emerald-400/30' : ''}`}>
-              <FileText className="w-5 h-5" />
-            </div>
-            {!sidebarCollapsed && (
-              <>
-                <span className="font-medium">Resources</span>
-                <ChevronRight className="ml-auto w-4 h-4 opacity-0 -translate-x-1 transition-all group-hover:opacity-100 group-hover:translate-x-0 text-emerald-500" />
-              </>
-            )}
-          </Link>
         </nav>
-      </div>
 
-      {/* Main Content - Full screen when sidebar is collapsed */}
-      <div className={`${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'} pt-4 transition-all duration-300`}>
-        {/* Hero Section with Animation */}
-        <section className="relative overflow-hidden bg-gradient-to-r from-green-600 via-emerald-700 to-teal-800 py-16 md:py-24 dark:from-green-900 dark:via-emerald-900 dark:to-teal-900">
-          {/* Aceternity Spotlight Effect */}
-          <Spotlight
-            className="-top-40 left-0 md:left-60 md:-top-20"
-            fill="rgba(16, 185, 129, 0.3)"
+        {/* Mobile Menu */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className={cn(
+                "mx-4 mt-2 p-4 rounded-2xl md:hidden",
+                "bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl",
+                "border border-white/20 dark:border-slate-800/50",
+                "shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
+              )}
+            >
+              <div className="flex flex-col gap-2">
+                {["Symptoms", "AI Chat", "Education", "Resources"].map((item) => (
+                  <Link
+                    key={item}
+                    to={`/${item.toLowerCase().replace(" ", "-")}`}
+                    className="px-4 py-3 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item}
+                  </Link>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </header>
+
+      {/* Hero Section */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-20">
+        <GradientMeshBackground />
+        <ParticleBackground />
+        
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-4xl mx-auto text-center">
+            {/* Badge */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-800 mb-8"
+            >
+              <Sparkles className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+              <span className="text-sm font-medium text-teal-700 dark:text-teal-300">
+                AI-Powered Healthcare Platform
+              </span>
+            </motion.div>
+
+            {/* Main Heading */}
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.1 }}
+              className="text-5xl md:text-6xl lg:text-7xl font-bold text-slate-800 dark:text-white mb-6 tracking-tight leading-[1.1]"
+            >
+              Your Health,{" "}
+              <span className="bg-gradient-to-r from-teal-600 to-emerald-500 bg-clip-text text-transparent">
+                Intelligently
+              </span>{" "}
+              Understood
+            </motion.h1>
+
+            {/* Typewriter Subheading */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+              className="h-10 mb-8"
+            >
+              <span className="text-xl md:text-2xl text-slate-600 dark:text-slate-400">
+                {typewriterText}
+                <span className="animate-pulse">|</span>
+              </span>
+            </motion.div>
+
+            {/* Description */}
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+            >
+              Experience healthcare reimagined with cutting-edge AI. Get instant symptom analysis, 
+              24/7 medical guidance, and connect with healthcare resources near you.
+            </motion.p>
+
+            {/* CTAs */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center"
+            >
+              <Link to="/symptoms">
+                <Button 
+                  size="lg"
+                  className={cn(
+                    "rounded-full px-8 py-6 text-lg font-semibold",
+                    "bg-gradient-to-r from-teal-500 to-emerald-500",
+                    "hover:from-teal-600 hover:to-emerald-600",
+                    "text-white shadow-xl shadow-teal-500/30",
+                    "transition-all duration-300",
+                    "animate-pulse hover:animate-none"
+                  )}
+                >
+                  Check Symptoms Now
+                  <ChevronRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
+              <Link to="/education">
+                <Button 
+                  variant="outline"
+                  size="lg"
+                  className={cn(
+                    "rounded-full px-8 py-6 text-lg font-semibold",
+                    "border-2 border-slate-300 dark:border-slate-700",
+                    "text-slate-700 dark:text-slate-300",
+                    "hover:bg-slate-100 dark:hover:bg-slate-800",
+                    "transition-all duration-300"
+                  )}
+                >
+                  Explore Features
+                </Button>
+              </Link>
+            </motion.div>
+          </div>
+
+          {/* Floating Stat Cards */}
+          <FloatingStatCard 
+            stat="10M+" 
+            label="Consultations" 
+            delay={0.8} 
+            position="top-32 left-[5%]"
           />
-          {/* Background Beams for modern effect */}
-          <BackgroundBeams className="opacity-40" />
-          
-          {/* Floating elements for enhanced visual appeal */}
-          <FloatingElement delay={0} className="absolute top-1/4 left-1/4">
-            <PulsingOrb size={120} color="bg-green-400/30" />
-          </FloatingElement>
-          <FloatingElement delay={1} className="absolute top-1/3 right-1/4">
-            <PulsingOrb size={100} color="bg-emerald-400/30" />
-          </FloatingElement>
-          <FloatingElement delay={2} className="absolute bottom-1/4 left-1/2">
-            <PulsingOrb size={80} color="bg-teal-400/30" />
-          </FloatingElement>
-          
-          <div className="container mx-auto px-4 relative z-10">
-            <div className="flex flex-col lg:flex-row items-center gap-12">
-              <motion.div 
-                className="flex-1 text-center lg:text-left"
+          <FloatingStatCard 
+            stat="150+" 
+            label="Conditions Covered" 
+            delay={1.0} 
+            position="top-48 right-[8%]"
+          />
+          <FloatingStatCard 
+            stat="24/7" 
+            label="Available" 
+            delay={1.2} 
+            position="bottom-32 left-[10%]"
+          />
+        </div>
+      </section>
+
+      {/* Stats Section */}
+      <section className="py-16 bg-white dark:bg-slate-900/50 border-y border-slate-200 dark:border-slate-800">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {stats.map((stat, index) => (
+              <motion.div
+                key={index}
                 initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                className="text-center"
               >
-                <motion.h1 
-                  className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6"
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.2 }}
-                >
-                  Empower Your <span className="bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 to-lime-300">Health Journey</span>
-                </motion.h1>
-                <motion.p 
-                  className="text-xl text-green-100 mb-8 max-w-2xl dark:text-green-200"
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.4 }}
-                >
-                  Your all-in-one platform for symptom analysis, health education, and personalized wellness resources.
-                </motion.p>
-                <motion.div 
-                  className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.6 }}
-                >
-                  <GradientButton 
-                    size="lg" 
-                    variant="primary"
-                    className="gap-2 text-lg px-8 py-6 rounded-full shadow-xl"
-                    aria-label="Get Started with Symptom Checker"
-                  >
-                    <a href="/symptoms" className="flex items-center">
-                      Get Started Today
-                      <ChevronRight className="w-5 h-5 ml-2" />
-                    </a>
-                  </GradientButton>
-                  <GradientButton 
-                    size="lg" 
-                    variant="secondary"
-                    className="gap-2 text-lg px-8 py-6 rounded-full"
-                    aria-label="Learn more about HealerAi"
-                  >
-                    Learn More
-                    <Star className="w-5 h-5 ml-2" />
-                  </GradientButton>
-                </motion.div>
+                <p className="text-3xl md:text-4xl font-bold text-teal-600 dark:text-teal-400 mb-2">
+                  {stat.value}
+                </p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {stat.label}
+                </p>
               </motion.div>
-              <motion.div 
-                className="flex-1 relative"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-20 md:py-28">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <span className="inline-block px-4 py-1.5 rounded-full bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 text-sm font-medium mb-4">
+              Features
+            </span>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-800 dark:text-white mb-6">
+              Everything You Need for{" "}
+              <span className="bg-gradient-to-r from-teal-600 to-emerald-500 bg-clip-text text-transparent">
+                Better Health
+              </span>
+            </h2>
+            <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
+              Comprehensive health tools designed to empower you with knowledge and connect you with care.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {features.map((feature, index) => (
+              <FeatureCard key={index} {...feature} delay={index * 0.1} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="py-20 md:py-28 bg-gradient-to-b from-teal-50/50 to-transparent dark:from-teal-900/10 dark:to-transparent">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <span className="inline-block px-4 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-sm font-medium mb-4">
+              How It Works
+            </span>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-800 dark:text-white mb-6">
+              Simple Steps to{" "}
+              <span className="bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">
+                Better Health
+              </span>
+            </h2>
+          </motion.div>
+
+          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {[
+              { step: "01", title: "Describe Symptoms", description: "Tell our AI about your symptoms using natural language or our interactive body map.", icon: Activity },
+              { step: "02", title: "Get AI Analysis", description: "Receive instant, personalized health insights powered by advanced medical AI.", icon: Brain },
+              { step: "03", title: "Take Action", description: "Connect with healthcare providers, access resources, or learn more about your health.", icon: Zap }
+            ].map((item, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.15 }}
+                className="relative"
               >
-                <div className="relative">
-                  <div className="absolute -top-6 -right-6 w-64 h-64 bg-yellow-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob dark:opacity-20"></div>
-                  <div className="absolute -bottom-6 -left-6 w-64 h-64 bg-green-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000 dark:opacity-20"></div>
-                  <div className="relative bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl dark:bg-black/20 dark:border-white/10">
-                    <LottieAnimation 
-                      animationData={aiHealthAnimation}
-                      className="w-64 h-64 mx-auto"
-                      loop={true}
-                      autoplay={true}
-                      aria-label="Health animation"
-                    />
+                <div className="text-center">
+                  <div className="relative inline-flex mb-6">
+                    <div className={cn(
+                      "w-20 h-20 rounded-3xl flex items-center justify-center",
+                      "bg-gradient-to-br from-teal-500 to-emerald-500"
+                    )}>
+                      <item.icon className="w-10 h-10 text-white" />
+                    </div>
+                    <span className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-slate-800 dark:bg-white text-white dark:text-slate-800 text-sm font-bold flex items-center justify-center">
+                      {item.step}
+                    </span>
                   </div>
+                  <h3 className="text-xl font-semibold text-slate-800 dark:text-white mb-3">
+                    {item.title}
+                  </h3>
+                  <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+                    {item.description}
+                  </p>
                 </div>
               </motion.div>
-            </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Dashboard Content */}
-        <main className="p-6 space-y-12">
-          {/* Health Updates Ticker - Made more prominent */}
-          <section aria-labelledby="health-updates-heading">
-            <HealthUpdatesTicker />
-          </section>
-
-          {/* Quick Actions with Aceternity HoverEffect */}
-          <section aria-labelledby="quick-actions-heading">
-            <motion.h3 
-              id="quick-actions-heading"
-              className="text-2xl font-bold mb-2 flex items-center text-foreground"
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-            >
-              <Zap className="w-6 h-6 mr-2 text-yellow-500" />
-              Quick Actions
-            </motion.h3>
-            <HoverEffect
-              items={quickActions.map((action) => ({
-                title: action.title,
-                description: action.description,
-                icon: <action.icon className="w-6 h-6" />,
-                link: action.href,
-                onClick: () => window.location.href = action.href,
-              }))}
-              className="gap-4"
-            />
-          </section>
-
-          {/* Daily Health Insight */}
-          <section aria-labelledby="daily-insight-heading">
-            <DailyInsightCard />
-          </section>
-
-          {/* Features Section - Enhanced with health metrics */}
-          <section className="py-12" aria-labelledby="features-heading">
-            <div className="text-center mb-12">
-              <motion.h2 
-                id="features-heading"
-                className="text-3xl md:text-4xl font-bold text-foreground mb-4"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                Why Choose HealerAi?
-              </motion.h2>
-              <motion.p 
-                className="text-lg text-muted-foreground max-w-2xl mx-auto"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-              >
-                Comprehensive health management tools designed for your wellness journey
-              </motion.p>
+      {/* CTA Section */}
+      <section className="py-20 md:py-28">
+        <div className="container mx-auto px-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            className={cn(
+              "relative overflow-hidden rounded-3xl p-12 md:p-16 text-center",
+              "bg-gradient-to-br from-teal-600 via-emerald-600 to-teal-700"
+            )}
+          >
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-0 left-0 w-64 h-64 bg-white rounded-full blur-3xl" />
+              <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl" />
             </div>
-            
-            {/* Health Metrics Cards with SpotlightCard effect */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {healthMetrics.map((metric, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 30, scale: 0.9 }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ 
-                    duration: 0.5, 
-                    delay: index * 0.1,
-                    type: "spring",
-                    stiffness: 100
-                  }}
-                >
-                  <SpotlightCard className="h-full" spotlightColor="rgba(16, 185, 129, 0.15)">
-                    <HealthMetricCard
-                      title={metric.title}
-                      value={metric.value}
-                      icon={metric.icon}
-                      trend={metric.trend}
-                      trendDirection={metric.trendDirection}
-                      color={metric.color}
-                      className="border-0 shadow-none bg-transparent"
-                    />
-                    <p className="text-center text-muted-foreground mt-3 text-sm">
-                      {metric.description}
-                    </p>
-                  </SpotlightCard>
-                </motion.div>
-              ))}
-            </div>
-          </section>
 
-          {/* Testimonials Section with Infinite Moving Cards */}
-          <section className="py-12" aria-labelledby="testimonials-heading">
-            <div className="text-center mb-8">
-              <motion.h2 
-                id="testimonials-heading"
-                className="text-3xl md:text-4xl font-bold text-foreground mb-4"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                <TextGenerateEffect words="What Our Users Say" className="text-3xl md:text-4xl" />
-              </motion.h2>
-              <motion.p 
-                className="text-lg text-muted-foreground max-w-2xl mx-auto"
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-              >
-                Join thousands of satisfied users who trust HealerAi for their health journey
-              </motion.p>
-            </div>
-            <InfiniteMovingCards
-              items={testimonials}
-              direction="right"
-              speed="slow"
-              pauseOnHover={true}
-              className="py-4"
-            />
-          </section>
-
-          {/* CTA Section with Moving Border Button */}
-          <section className="py-16 text-center">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.6 }}
-              className="max-w-3xl mx-auto"
-            >
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-6">
+            <div className="relative z-10">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
                 Ready to Transform Your Health Journey?
               </h2>
-              <p className="text-lg text-muted-foreground mb-8">
-                Start using HealerAi today and take control of your wellness with AI-powered insights and personalized recommendations.
+              <p className="text-lg text-white/80 max-w-2xl mx-auto mb-10">
+                Join millions of users who trust HealAI for their health needs. Start your journey to better health today.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link to="/symptoms">
-                  <MovingBorderButton
-                    duration={3000}
-                    className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-semibold px-8 py-4"
+                  <Button 
+                    size="lg"
+                    className={cn(
+                      "rounded-full px-10 py-6 text-lg font-semibold",
+                      "bg-white text-teal-600",
+                      "hover:bg-white/90",
+                      "shadow-xl",
+                      "transition-all duration-300"
+                    )}
                   >
                     Get Started Free
-                  </MovingBorderButton>
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
                 </Link>
                 <Link to="/education">
-                  <Button variant="outline" size="lg" className="rounded-full px-8">
+                  <Button 
+                    variant="outline"
+                    size="lg"
+                    className={cn(
+                      "rounded-full px-10 py-6 text-lg font-semibold",
+                      "border-2 border-white/30 text-white",
+                      "hover:bg-white/10",
+                      "transition-all duration-300"
+                    )}
+                  >
                     Learn More
-                    <ChevronRight className="w-4 h-4 ml-2" />
                   </Button>
                 </Link>
               </div>
-            </motion.div>
-          </section>
-        </main>
-      </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="py-12 border-t border-slate-200 dark:border-slate-800">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-emerald-500 flex items-center justify-center">
+                <Heart className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-lg font-bold text-slate-800 dark:text-white">
+                Heal<span className="text-teal-600 dark:text-teal-400">AI</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-6 text-sm text-slate-600 dark:text-slate-400">
+              <Link to="/education" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
+                Education
+              </Link>
+              <Link to="/resources" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
+                Resources
+              </Link>
+              <span>Privacy</span>
+              <span>Terms</span>
+            </div>
+            <p className="text-sm text-slate-500 dark:text-slate-500">
+              2024 HealAI. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
