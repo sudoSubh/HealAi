@@ -163,7 +163,7 @@ const HealthUpdateCard = forwardRef<
   return (
     <div
       ref={ref}
-      className={`flex-shrink-0 w-80 mr-4 rounded-2xl overflow-hidden shadow-xl border cursor-pointer transform transition-all duration-500 hover:scale-105 hover:shadow-2xl bg-gradient-to-br ${gradients[index % gradients.length]} ${isActive ? "ring-4 ring-emerald-500 scale-105" : ""}`}
+      className={`flex-shrink-0 w-72 sm:w-80 mr-4 rounded-2xl overflow-hidden shadow-xl border cursor-pointer transform transition-all duration-500 hover:scale-105 hover:shadow-2xl bg-gradient-to-br ${gradients[index % gradients.length]} ${isActive ? "ring-4 ring-emerald-500 scale-105" : ""}`}
       onClick={onClick}
     >
       <motion.div
