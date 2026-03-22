@@ -2,17 +2,5 @@
   "name": "healerai",
   "version": "1.0.0",
   "description": "HealerAI - Health Navigation Platform",
-  "private": true,
-  "workspaces": [
-    "frontend",
-    "backend"
-  ],
-  "scripts": {
-    "dev:frontend": "cd frontend && npm install && npm run dev",
-    "build:frontend": "cd frontend && npm install && npm run build",
-    "install:all": "cd frontend && npm install && cd ../backend && npm install"
-  },
-  "dependencies": {
-    "@google/generative-ai": "^0.24.1"
-  }
+  "private": true
 }
