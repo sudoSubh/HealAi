@@ -54,7 +54,7 @@ export default function SymptomChecker() {
               <div>
                 <h1 className="text-2xl font-bold text-foreground flex items-center">
                   <Stethoscope className="w-6 h-6 mr-2 text-primary" />
-                  Symptom Checker
+                  Symptoms
                 </h1>
                 <p className="text-muted-foreground text-sm">AI-powered health analysis and insights</p>
               </div>

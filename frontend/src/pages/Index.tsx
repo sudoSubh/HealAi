@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation as useRouterLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion";
@@ -17,7 +17,6 @@ import {
   Play,
   Clock,
   Users,
-  CheckCircle2,
   ArrowRight,
   Menu,
   X,
@@ -29,8 +28,8 @@ import {
   Settings,
   Newspaper,
   Star,
-  TrendingUp,
-  Lightbulb
+  Video,
+  Home,
 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { cn } from "@/lib/utils";
@@ -49,6 +48,7 @@ import { DailyInsightCard } from "@/components/DailyInsightCard";
 import { HealthUpdatesTicker } from "@/components/HealthUpdatesTicker";
 import { HealthAlertsPanel } from "@/components/HealthAlertsPanel";
 import { LocationBasedHealthNews } from "@/components/LocationBasedHealthNews";
+import { useUserLocation } from "@/hooks/useUserLocation";
 
 // Typewriter effect hook
 const useTypewriter = (words: string[], typingSpeed = 100, deletingSpeed = 50, pauseTime = 2000) => {
@@ -275,9 +275,21 @@ const Index = () => {
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
+  const userLocation = useUserLocation();
+  const routerLocation = useRouterLocation();
+
+  // Nav items with icons
+  const navItems = [
+    { name: "Home", path: "/", icon: Home },
+    { name: "Symptoms", path: "/symptoms", icon: Stethoscope },
+    { name: "AI Chat", path: "/medical-bot", icon: Bot },
+    { name: "Health Hub", path: "/health-hub", icon: Video },
+    { name: "Education", path: "/education", icon: BookOpen },
+    { name: "Resources", path: "/resources", icon: MapPin },
+  ];
 
   const typewriterText = useTypewriter([
-    "AI Symptom Checker",
+    "Symptoms Checker",
     "24/7 Medical Chatbot", 
     "Nearby Clinics",
     "Health Education",
@@ -291,7 +303,7 @@ const Index = () => {
   }, []);
 
   const features = [
-    { icon: Stethoscope, title: "AI Symptom Checker", description: "Advanced AI analysis to understand your symptoms with personalized health insights.", href: "/symptoms" },
+    { icon: Stethoscope, title: "Symptoms", description: "Advanced AI analysis to understand your symptoms with personalized health insights.", href: "/symptoms" },
     { icon: Bot, title: "Medical Chatbot", description: "24/7 AI health assistant for evidence-based medical guidance anytime you need it.", href: "/medical-bot" },
     { icon: BookOpen, title: "Health Education", description: "Curated articles, videos, and resources for informed health decisions.", href: "/education" },
     { icon: MapPin, title: "Find Clinics", description: "Locate nearby healthcare facilities, specialists, and emergency services.", href: "/resources" },
@@ -306,47 +318,74 @@ const Index = () => {
         <nav className={cn(
           "mx-3 sm:mx-4 mt-3 px-4 sm:px-6 py-2.5 rounded-2xl",
           "backdrop-blur-xl transition-all duration-300",
-          scrolled 
-            ? "bg-white/90 dark:bg-slate-900/90 shadow-sm border border-slate-200/60 dark:border-slate-700/40"
+          scrolled
+            ? "bg-white/90 dark:bg-slate-900/90 shadow-md border border-slate-200/60 dark:border-slate-700/40"
             : "bg-white/60 dark:bg-slate-900/40 border border-transparent"
         )}>
           <div className="max-w-7xl mx-auto flex items-center justify-between">
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-9 h-9 rounded-lg bg-teal-600 flex items-center justify-center">
-                <Heart className="w-4 h-4 text-white" />
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-2 group">
+              <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center shadow-md shadow-teal-600/20 group-hover:shadow-teal-600/40 transition-all duration-300">
+                <Heart className="w-4.5 h-4.5 text-white" fill="currentColor" />
+                <motion.div
+                  className="absolute inset-0 rounded-xl bg-white/20"
+                  animate={{ opacity: [0, 0.3, 0] }}
+                  transition={{ duration: 2.5, repeat: Infinity }}
+                />
               </div>
-              <span className="text-lg font-bold text-slate-800 dark:text-white">
-                Heal<span className="text-teal-600">AI</span>
-              </span>
+              <div className="flex flex-col leading-none">
+                <span className="text-base font-black text-slate-800 dark:text-white tracking-tight">
+                  Heal<span className="text-teal-600">AI</span>
+                </span>
+                <span className="text-[9px] font-medium text-slate-400 dark:text-slate-500 tracking-widest uppercase">Health Intelligence</span>
+              </div>
             </Link>
 
-            <div className="hidden md:flex items-center gap-1">
-              {[
-                { name: "Symptoms", path: "/symptoms" },
-                { name: "AI Chat", path: "/medical-bot" },
-                { name: "Health Hub", path: "/health-hub" },
-                { name: "Education", path: "/education" },
-                { name: "Resources", path: "/resources" },
-              ].map((item) => (
-                <Link
-                  key={item.name}
-                  to={item.path}
-                  className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-colors"
-                >
-                  {item.name}
-                </Link>
-              ))}
+            {/* Desktop Nav */}
+            <div className="hidden md:flex items-center gap-0.5">
+              {navItems.map((item) => {
+                const isActive = routerLocation.pathname === item.path;
+                return (
+                  <Link
+                    key={item.name}
+                    to={item.path}
+                    className={cn(
+                      "relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium transition-all duration-200",
+                      isActive
+                        ? "text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30"
+                        : "text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-teal-50/70 dark:hover:bg-teal-900/20"
+                    )}
+                  >
+                    <item.icon className={cn("w-3.5 h-3.5", isActive ? "text-teal-600 dark:text-teal-400" : "")} />
+                    {item.name}
+                    {isActive && (
+                      <motion.div
+                        layoutId="nav-active"
+                        className="absolute inset-0 rounded-xl bg-teal-100/60 dark:bg-teal-900/30 -z-10"
+                        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+                      />
+                    )}
+                  </Link>
+                );
+              })}
             </div>
 
+            {/* Right actions */}
             <div className="flex items-center gap-1.5">
-              {/* Google Translate */}
+              {/* Location indicator */}
+              {userLocation.city && (
+                <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/40">
+                  <MapPin className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">{userLocation.city}</span>
+                </div>
+              )}
+
               <div className="hidden sm:block">
                 <GoogleTranslate />
               </div>
 
               <ModeToggle />
 
-              {/* Profile / Auth */}
               {isLoggedIn ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -378,10 +417,10 @@ const Index = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button 
+                <Button
                   onClick={() => setIsLoggedIn(true)}
                   size="sm"
-                  className="rounded-full px-4 text-xs font-medium bg-teal-600 hover:bg-teal-700 text-white"
+                  className="rounded-full px-4 text-xs font-semibold bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white shadow-sm shadow-teal-600/20"
                 >
                   Sign In
                 </Button>
@@ -398,35 +437,44 @@ const Index = () => {
         <AnimatePresence>
           {mobileMenuOpen && (
             <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.15 }}
+              initial={{ opacity: 0, y: -10, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
               className={cn(
                 "mx-3 mt-2 p-3 rounded-xl md:hidden",
                 "bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl",
                 "border border-slate-200/60 dark:border-slate-700/40",
-                "shadow-lg"
+                "shadow-xl"
               )}
             >
-              <div className="flex flex-col gap-0.5">
-                {[
-                  { name: "Symptoms", path: "/symptoms" },
-                  { name: "AI Chat", path: "/medical-bot" },
-                  { name: "Health Hub", path: "/health-hub" },
-                  { name: "Education", path: "/education" },
-                  { name: "Resources", path: "/resources" }
-                ].map((item) => (
-                  <Link
-                    key={item.name}
-                    to={item.path}
-                    className="px-3 py-2.5 rounded-lg text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    {item.name}
-                  </Link>
-                ))}
+              <div className="flex flex-col gap-1">
+                {navItems.map((item) => {
+                  const isActive = routerLocation.pathname === item.path;
+                  return (
+                    <Link
+                      key={item.name}
+                      to={item.path}
+                      className={cn(
+                        "flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors",
+                        isActive
+                          ? "bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      )}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <item.icon className={cn("w-4 h-4", isActive ? "text-teal-600 dark:text-teal-400" : "text-slate-400")} />
+                      {item.name}
+                    </Link>
+                  );
+                })}
               </div>
+              {userLocation.city && (
+                <div className="mt-2 px-3 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                  <MapPin className="w-3 h-3" />
+                  {[userLocation.city, userLocation.region].filter(Boolean).join(", ")}
+                </div>
+              )}
               <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/40 px-3">
                 <GoogleTranslate />
               </div>
@@ -563,14 +611,27 @@ const Index = () => {
       {/* Daily Insights & Health Updates Section */}
       <section className="py-12 border-t border-slate-200/60 dark:border-slate-800/40">
         <div className="container mx-auto px-4">
+          {/* Location banner */}
+          {userLocation.city && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 mb-6 px-4 py-2 rounded-full bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/50 dark:border-emerald-800/40 w-fit mx-auto"
+            >
+              <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
+                Showing personalized insights for {[userLocation.city, userLocation.region, userLocation.country].filter(Boolean).join(", ")}
+              </span>
+            </motion.div>
+          )}
           <div className="grid lg:grid-cols-5 gap-6">
             {/* Daily Insight */}
             <div className="lg:col-span-2">
-              <DailyInsightCard />
+              <DailyInsightCard location={{ city: userLocation.city, region: userLocation.region, country: userLocation.country }} />
             </div>
             {/* Health Updates Ticker */}
             <div className="lg:col-span-3">
-              <HealthUpdatesTicker />
+              <HealthUpdatesTicker location={{ city: userLocation.city, region: userLocation.region, country: userLocation.country }} />
             </div>
           </div>
         </div>

@@ -8,6 +8,7 @@
     "dev": "nodemon server.cjs"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@tailwindcss/typography": "^0.5.19",
     "cors": "^2.8.5",
     "express": "^4.21.1",
