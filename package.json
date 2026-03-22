@@ -8,8 +8,15 @@
     "dev": "nodemon server.cjs"
   },
   "dependencies": {
+    "@tailwindcss/typography": "^0.5.19",
+    "cors": "^2.8.5",
     "express": "^4.21.1",
-    "cors": "^2.8.5"
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^0.577.0",
+    "react": "^19.2.4",
+    "react-router-dom": "^7.13.1",
+    "tailwindcss": "^4.2.2",
+    "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
