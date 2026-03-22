@@ -28,6 +28,7 @@ import {
   Settings,
   Newspaper,
   Star,
+  FileText,
   Video,
   Home,
 } from "lucide-react";
@@ -282,10 +283,10 @@ const Index = () => {
   const navItems = [
     { name: "Home", path: "/", icon: Home },
     { name: "Symptoms", path: "/symptoms", icon: Stethoscope },
+    { name: "Reports", path: "/medical-dashboard", icon: FileText },
     { name: "AI Chat", path: "/medical-bot", icon: Bot },
     { name: "Health Hub", path: "/health-hub", icon: Video },
     { name: "Education", path: "/education", icon: BookOpen },
-    { name: "Resources", path: "/resources", icon: MapPin },
   ];
 
   const typewriterText = useTypewriter([
