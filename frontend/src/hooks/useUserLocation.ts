@@ -37,8 +37,36 @@ export function useUserLocation() {
         // ignore
       }
     }
-    // No confirmed location — signal that we need to ask the user
-    setLocation({ city: null, region: null, country: null, loading: false, confirmed: false });
+    
+    // Auto-detect on first load without blocking
+    const autoDetect = async () => {
+      try {
+        const res = await fetch("https://ipapi.co/json/");
+        const data = await res.json();
+        if (data?.city) {
+          const loc = { 
+            city: data.city, 
+            region: data.region || null, 
+            country: data.country_name || null, 
+            loading: false, 
+            confirmed: true 
+          };
+          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(loc));
+          setLocation(loc);
+        } else {
+          // Detect failed, set empty but confirmed
+          const loc = { city: null, region: null, country: null, loading: false, confirmed: true };
+          sessionStorage.setItem(STORAGE_KEY, JSON.stringify(loc));
+          setLocation(loc);
+        }
+      } catch {
+        const loc = { city: null, region: null, country: null, loading: false, confirmed: true };
+        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(loc));
+        setLocation(loc);
+      }
+    };
+    
+    autoDetect();
   }, []);
 
   const confirmLocation = (city: string, region?: string, country?: string) => {

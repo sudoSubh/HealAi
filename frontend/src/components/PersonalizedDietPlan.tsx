@@ -111,7 +111,7 @@ Return ONLY a valid JSON array (no markdown, no extra text) in this exact format
 Tailor specifically to the conditions and avoid allergens. Be specific with Indian / global food items.`;
 
     try {
-      const raw = await callGemini(prompt);
+      const raw = await callGemini(prompt, undefined, undefined, "daily-insight");
       setRawText(raw);
       // Strip possible markdown fences
       const clean = raw.replace(/```json\n?/g, "").replace(/```/g, "").trim();

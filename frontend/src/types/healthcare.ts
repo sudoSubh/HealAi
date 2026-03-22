@@ -1,10 +1,12 @@
 export interface HealthcareFacility {
+  id: string;
   name: string;
   type: string;
   ownership: "public" | "private" | "unknown";
   address: string;
   distance: string;
   rating: number;
+  reviewCount: number;
   phone: string;
   hours: string;
   services: string[];

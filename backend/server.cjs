@@ -68,7 +68,7 @@ app.post('/api/gemini', async (req, res) => {
 
   try {
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -102,7 +102,22 @@ app.get('/api/google-places', async (req, res) => {
   }
 
   // Get parameters from query
-  const { lat, lng, radius = '10000', type = 'hospital' } = req.query;
+  const { lat, lng, radius = '10000', type = 'hospital', address } = req.query;
+
+  // If address is provided, use Text Search instead of Nearby Search
+  if (address) {
+    try {
+      const apiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!apiKey) return res.status(500).json({ error: 'Google Maps API key not configured' });
+      
+      const textSearchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(address + ' ' + type)}&key=${apiKey}`;
+      const response = await fetch(textSearchUrl);
+      const data = await response.json();
+      return res.status(200).json(data);
+    } catch (error) {
+      return res.status(500).json({ error: 'Text search failed' });
+    }
+  }
 
   // Validate required parameters
   if (!lat || !lng) {
@@ -112,7 +127,7 @@ app.get('/api/google-places', async (req, res) => {
   // Validate that lat and lng are numbers
   const latitude = parseFloat(lat);
   const longitude = parseFloat(lng);
-  
+
   if (isNaN(latitude) || isNaN(longitude)) {
     return res.status(400).json({ error: 'Invalid latitude or longitude' });
   }
@@ -126,7 +141,7 @@ app.get('/api/google-places', async (req, res) => {
   try {
     // Google Maps API key from environment variables
     const apiKey = process.env.GOOGLE_MAPS_API_KEY;
-    
+
     if (!apiKey) {
       console.error('Google Maps API key not found');
       return res.status(500).json({ error: 'Google Maps API key not configured' });
@@ -134,23 +149,23 @@ app.get('/api/google-places', async (req, res) => {
 
     // Construct the Google Places API URL for nearby search
     const nearbySearchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=${searchRadius}&type=${type}&key=${apiKey}`;
-    
+
     console.log('Making request to Google Places API (Nearby Search):', nearbySearchUrl);
 
     // Make request to Google Places API (Nearby Search)
     const nearbyResponse = await fetch(nearbySearchUrl);
-    
+
     if (!nearbyResponse.ok) {
       const errorText = await nearbyResponse.text();
       console.error('Google Places API error:', nearbyResponse.status, errorText);
-      return res.status(nearbyResponse.status).json({ 
-        error: `Google Places API error: ${nearbyResponse.status}`, 
-        details: errorText 
+      return res.status(nearbyResponse.status).json({
+        error: `Google Places API error: ${nearbyResponse.status}`,
+        details: errorText
       });
     }
 
     const nearbyData = await nearbyResponse.json();
-    
+
     // Fetch detailed information for each place
     const detailedResults = [];
     if (nearbyData.results) {
@@ -158,47 +173,47 @@ app.get('/api/google-places', async (req, res) => {
         // Construct the Google Places Details API URL
         // Include more fields to get better information
         const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,formatted_phone_number,international_phone_number,rating,user_ratings_total,opening_hours,website,geometry,url,place_id&key=${apiKey}`;
-        
+
         try {
           // Make request to Google Places Details API
           const detailsResponse = await fetch(detailsUrl);
-          
+
           if (detailsResponse.ok) {
             const detailsData = await detailsResponse.json();
-            
+
             if (detailsData.result) {
               // Use detailed geometry if available, otherwise fallback to original geometry
               const geometry = detailsData.result.geometry || place.geometry;
-              
+
               // Calculate distance using the most accurate geometry available
-              const distance = geometry && geometry.location ? 
+              const distance = geometry && geometry.location ?
                 calculateDistance(
-                  latitude, 
-                  longitude, 
-                  geometry.location.lat, 
+                  latitude,
+                  longitude,
+                  geometry.location.lat,
                   geometry.location.lng
                 ) : 0;
-              
+
               console.log(`Hospital: ${place.name}, Distance: ${distance.toFixed(2)} km`);
-              
+
               // Merge the detailed information with the nearby search result
               const detailedPlace = {
                 ...place,
                 ...detailsData.result,
                 distance: distance
               };
-              
+
               detailedResults.push(detailedPlace);
             } else {
               // If details API doesn't return result, use the nearby search data
-              const distance = place.geometry && place.geometry.location ? 
+              const distance = place.geometry && place.geometry.location ?
                 calculateDistance(
-                  latitude, 
-                  longitude, 
-                  place.geometry.location.lat, 
+                  latitude,
+                  longitude,
+                  place.geometry.location.lat,
                   place.geometry.location.lng
                 ) : 0;
-              
+
               detailedResults.push({
                 ...place,
                 distance: distance
@@ -206,14 +221,14 @@ app.get('/api/google-places', async (req, res) => {
             }
           } else {
             // If details API request fails, use the nearby search data
-            const distance = place.geometry && place.geometry.location ? 
+            const distance = place.geometry && place.geometry.location ?
               calculateDistance(
-                latitude, 
-                longitude, 
-                place.geometry.location.lat, 
+                latitude,
+                longitude,
+                place.geometry.location.lat,
                 place.geometry.location.lng
               ) : 0;
-            
+
             detailedResults.push({
               ...place,
               distance: distance
@@ -221,21 +236,21 @@ app.get('/api/google-places', async (req, res) => {
           }
         } catch (detailsError) {
           // If details API request fails, use the nearby search data
-          const distance = place.geometry && place.geometry.location ? 
+          const distance = place.geometry && place.geometry.location ?
             calculateDistance(
-              latitude, 
-              longitude, 
-              place.geometry.location.lat, 
+              latitude,
+              longitude,
+              place.geometry.location.lat,
               place.geometry.location.lng
             ) : 0;
-          
+
           detailedResults.push({
             ...place,
             distance: distance
           });
         }
       }
-      
+
       // Sort by distance (closest first)
       detailedResults.sort((a, b) => (a.distance || 0) - (b.distance || 0));
     }
@@ -247,7 +262,7 @@ app.get('/api/google-places', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching from Google Places API:', error);
-    return res.status(500).json({ 
+    return res.status(500).json({
       error: 'Failed to fetch data from Google Places API',
       details: error instanceof Error ? error.message : 'Unknown error'
     });

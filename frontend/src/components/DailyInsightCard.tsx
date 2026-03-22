@@ -26,8 +26,10 @@ export function DailyInsightCard({ location }: DailyInsightCardProps) {
     try {
       const newInsight = await generateDailyInsight(forceNew, location);
       setInsight(newInsight);
-    } catch {
-      setError("Failed to load daily insight. Please try again later.");
+    } catch (error: any) {
+      console.error("[HealAI] Insight error:", error);
+      const isQuotaError = error?.message?.includes("429") || error?.status === 429 || error?.message?.toLowerCase().includes("quota");
+      setError(isQuotaError ? "API Quota Exceeded (429): Daily limit reached for this task." : "Failed to load daily insight. Please try again later.");
     } finally {
       setLoading(false);
     }

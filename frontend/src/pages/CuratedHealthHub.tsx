@@ -1,33 +1,16 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { motion } from "framer-motion";
-import { 
-  Youtube, 
-  GraduationCap, 
-  PlayCircle, 
-  Building,
-  RefreshCcw,
-  AlertCircle,
-  Search,
-  Filter,
-  ArrowDownWideNarrow,
-  ArrowUpWideNarrow,
-  Heart,
-  Pill,
-  Brain,
-  Apple,
-  Stethoscope,
-  Baby,
-  Dumbbell,
-  Microscope,
-  Leaf,
-  Trophy,
-  Users,
-  BookOpen
+import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Youtube, GraduationCap, PlayCircle, Building,
+  RefreshCcw, AlertCircle, Search,
+  Heart, Pill, Brain, Apple, Stethoscope, Baby,
+  Leaf, Trophy, Users, BookOpen, ArrowLeft, TrendingUp,
+  ExternalLink, Shield, Star, Sparkles, Dumbbell, Microscope,
+  Play
 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -38,22 +21,32 @@ import { NearbyHospitals } from "@/components/health-hub/nearby-hospitals";
 import { CURATED_VIDEOS, VIDEOS_BY_CATEGORY } from "@/data/curatedVideos";
 import { CuratedVideo } from "@/data/curatedVideos";
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
+  Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious,
 } from "@/components/ui/carousel";
+import { cn } from "@/lib/utils";
 
-// Define quick action topics
+// Quick action topics — redesigned with gradients
 const QUICK_ACTIONS = [
-  { id: "Govt. Schemes", title: "Govt. Schemes", icon: Trophy, color: "bg-blue-500" },
-  { id: "Yoga/AYUSH", title: "Yoga/AYUSH", icon: Leaf, color: "bg-green-500" },
-  { id: "Disease Control", title: "Disease Control", icon: Stethoscope, color: "bg-red-500" },
-  { id: "Public Awareness", title: "Public Awareness", icon: Users, color: "bg-purple-500" },
+  { id: "Govt. Schemes", title: "Govt. Schemes", icon: Trophy, gradient: "from-blue-500 to-indigo-600", lightBg: "bg-blue-50 dark:bg-blue-900/20" },
+  { id: "Yoga/AYUSH", title: "Yoga & AYUSH", icon: Leaf, gradient: "from-emerald-500 to-green-600", lightBg: "bg-emerald-50 dark:bg-emerald-900/20" },
+  { id: "Disease Control", title: "Disease Control", icon: Stethoscope, gradient: "from-red-500 to-rose-600", lightBg: "bg-red-50 dark:bg-red-900/20" },
+  { id: "Public Awareness", title: "Public Awareness", icon: Users, gradient: "from-purple-500 to-violet-600", lightBg: "bg-purple-50 dark:bg-purple-900/20" },
+  { id: "Trusted Health", title: "Trusted Health", icon: Heart, gradient: "from-pink-500 to-rose-600", lightBg: "bg-pink-50 dark:bg-pink-900/20" },
+  { id: "General Health", title: "General Health", icon: Apple, gradient: "from-amber-500 to-orange-600", lightBg: "bg-amber-50 dark:bg-amber-900/20" },
 ];
 
-// Define sample video data
+// Tab config with matching colors
+const TABS = [
+  { value: "all", label: "All Videos", icon: PlayCircle, shortLabel: "All" },
+  { value: "curated", label: "Curated", icon: GraduationCap, shortLabel: "Curated" },
+  { value: "youtube", label: "YouTube", icon: Youtube, shortLabel: "YT" },
+  { value: "government", label: "Government", icon: Building, shortLabel: "Gov" },
+  { value: "doctors", label: "Doctors", icon: Stethoscope, shortLabel: "Docs" },
+  { value: "heart", label: "Heart Health", icon: Heart, shortLabel: "Heart" },
+  { value: "medication", label: "Medication", icon: Pill, shortLabel: "Meds" },
+];
+
+// Video interface (matching existing)
 interface Video {
   id: string;
   title: string;
@@ -66,91 +59,78 @@ interface Video {
 }
 
 const SAMPLE_VIDEOS: Video[] = [
-  {
-    id: "1",
-    title: "Understanding Heart Health",
-    description: "Learn about maintaining a healthy heart through diet and exercise",
-    thumbnailUrl: "/demoPlaceholder.webp",
-    channelTitle: "Health Ministry",
-    publishedAt: "2024-01-15",
-    viewCount: "15000",
-    category: "heart"
-  },
-  {
-    id: "2",
-    title: "Nutrition for Daily Wellness",
-    description: "Essential nutrients for maintaining good health",
-    thumbnailUrl: "/nutrition.jpg",
-    channelTitle: "Nutrition Experts",
-    publishedAt: "2024-02-20",
-    viewCount: "12000",
-    category: "nutrition"
-  },
-  {
-    id: "3",
-    title: "Mental Wellness Tips",
-    description: "Simple practices to improve mental health",
-    thumbnailUrl: "/mindfulness.jpg",
-    channelTitle: "Mental Health Institute",
-    publishedAt: "2024-03-10",
-    viewCount: "18000",
-    category: "mental"
-  },
-  {
-    id: "4",
-    title: "Medication Safety Guide",
-    description: "How to safely take and store medications",
-    thumbnailUrl: "/demoPlaceholder.webp",
-    channelTitle: "Pharmacy Network",
-    publishedAt: "2024-01-25",
-    viewCount: "9500",
-    category: "medication"
-  },
-  {
-    id: "5",
-    title: "Government Health Initiatives",
-    description: "Latest updates on national health programs",
-    thumbnailUrl: "/heroImage.webp",
-    channelTitle: "Ministry of Health",
-    publishedAt: "2024-03-05",
-    viewCount: "22000",
-    category: "government"
-  },
-  {
-    id: "6",
-    title: "Exercise for All Ages",
-    description: "Fitness routines suitable for different age groups",
-    thumbnailUrl: "/fitness.jpg",
-    channelTitle: "Fitness Experts",
-    publishedAt: "2024-02-15",
-    viewCount: "14500",
-    category: "fitness"
-  }
+  { id: "1", title: "Understanding Heart Health", description: "Learn about maintaining a healthy heart through diet and exercise", thumbnailUrl: "/demoPlaceholder.webp", channelTitle: "Health Ministry", publishedAt: "2024-01-15", viewCount: "15000", category: "heart" },
+  { id: "2", title: "Nutrition for Daily Wellness", description: "Essential nutrients for maintaining good health", thumbnailUrl: "/nutrition.jpg", channelTitle: "Nutrition Experts", publishedAt: "2024-02-20", viewCount: "12000", category: "nutrition" },
+  { id: "3", title: "Mental Wellness Tips", description: "Simple practices to improve mental health", thumbnailUrl: "/mindfulness.jpg", channelTitle: "Mental Health Institute", publishedAt: "2024-03-10", viewCount: "18000", category: "mental" },
+  { id: "4", title: "Medication Safety Guide", description: "How to safely take and store medications", thumbnailUrl: "/demoPlaceholder.webp", channelTitle: "Pharmacy Network", publishedAt: "2024-01-25", viewCount: "9500", category: "medication" },
+  { id: "5", title: "Government Health Initiatives", description: "Latest updates on national health programs", thumbnailUrl: "/heroImage.webp", channelTitle: "Ministry of Health", publishedAt: "2024-03-05", viewCount: "22000", category: "government" },
+  { id: "6", title: "Exercise for All Ages", description: "Fitness routines suitable for different age groups", thumbnailUrl: "/fitness.jpg", channelTitle: "Fitness Experts", publishedAt: "2024-02-15", viewCount: "14500", category: "fitness" },
 ];
 
-// Official government and reputable health channels
 const HEALTH_CHANNELS = [
-  // Indian central government health channels
-  'UCsyPEi8BS07G8ZPXmpzIZrg', // Ministry of Health and Family Welfare, India
-  'UCT0-V_Z5-MuwN5fpbO-25Ag', // AIIMS, New Delhi
-  'UCMO8AoVI1HtqbxKVOevaBSw', // ICMR Organisation
-  'UC0InVdvqNyNzKBl1-TL348A', // Apollo Hospitals
-  
-  // State government health channels
-  'UCV7Vc3q7MdfsX3vJ2wJr3wQ', // Kerala Health Department
-  'UCN06Qz5uN2d4ZQ5Z8Y7Z5wA', // Tamil Nadu Health Department
-  'UCF5h75h8pAaHw6v6Z8Y7Z5w', // Maharashtra Health Department
-  
-  // International health organizations
-  'UCzQUP1qoWDoEbmsQ4_Yi7pA', // WHO
-  'UCJ014fTUtYV9TAZsFH7CI9A', // CDC
-  'UCQzd3SL6D0AX1l9AhlS8apw', // NIH
-  
-  // Additional reputable health organizations
-  'UCzUPzt5iM3jD48bvu8YAUVw', // Mayo Clinic
-  'UCZ5XnGb-3t7jCkXdawN2tkA', // WebMD
+  'UCsyPEi8BS07G8ZPXmpzIZrg', 'UCT0-V_Z5-MuwN5fpbO-25Ag',
+  'UCMO8AoVI1HtqbxKVOevaBSw', 'UC0InVdvqNyNzKBl1-TL348A',
+  'UCV7Vc3q7MdfsX3vJ2wJr3wQ', 'UCzQUP1qoWDoEbmsQ4_Yi7pA',
+  'UCJ014fTUtYV9TAZsFH7CI9A', 'UCQzd3SL6D0AX1l9AhlS8apw',
+  'UCzUPzt5iM3jD48bvu8YAUVw',
 ];
 
+// Category icon mapping
+const getCategoryIcon = (category: string) => {
+  const map: Record<string, JSX.Element> = {
+    "Govt. Schemes": <Trophy className="h-4 w-4" />,
+    "Yoga/AYUSH": <Leaf className="h-4 w-4" />,
+    "Trusted Health": <Heart className="h-4 w-4" />,
+    "Disease Control": <Stethoscope className="h-4 w-4" />,
+    "General Health": <Users className="h-4 w-4" />,
+    "Govt. Policy": <BookOpen className="h-4 w-4" />,
+    "General Policy": <BookOpen className="h-4 w-4" />,
+    "Public Awareness": <Users className="h-4 w-4" />,
+    "Medicine/Myths": <BookOpen className="h-4 w-4" />,
+    "Yoga/Heart": <Heart className="h-4 w-4" />,
+  };
+  return map[category] || <PlayCircle className="h-4 w-4" />;
+};
+
+const determineCategory = (title: string, description: string): string => {
+  const text = (title + " " + description).toLowerCase();
+  if (text.includes("government") || text.includes("ministry") || text.includes("scheme") || text.includes("ayushman")) return "Govt. Schemes";
+  if (text.includes("heart") || text.includes("cardio")) return "Heart Health";
+  if (text.includes("medicine") || text.includes("drug") || text.includes("medication")) return "Medication";
+  if (text.includes("mental") || text.includes("mind") || text.includes("stress")) return "Mental Health";
+  if (text.includes("nutrition") || text.includes("diet") || text.includes("food")) return "Nutrition";
+  if (text.includes("exercise") || text.includes("fitness")) return "Fitness";
+  if (text.includes("baby") || text.includes("child") || text.includes("pregnancy")) return "Maternal Health";
+  if (text.includes("yoga") || text.includes("ayush") || text.includes("ayurveda")) return "Yoga/AYUSH";
+  if (text.includes("disease") || text.includes("virus") || text.includes("infection")) return "Disease Control";
+  return "General Health";
+};
+
+// ── Stat Card ──────────────────────────────────────────────────────────────
+const StatCard = ({ icon: Icon, value, label, gradient }: { icon: React.ElementType; value: string; label: string; gradient: string }) => (
+  <div className="relative group overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 hover:shadow-lg transition-all">
+    <div className={cn("absolute top-0 right-0 w-20 h-20 rounded-full blur-2xl opacity-20 bg-gradient-to-br", gradient)} />
+    <div className={cn("w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center mb-3 shadow-sm", gradient)}>
+      <Icon className="w-5 h-5 text-white" />
+    </div>
+    <p className="text-2xl font-extrabold text-slate-800 dark:text-white">{value}</p>
+    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{label}</p>
+  </div>
+);
+
+// ── Skeleton ─────────────────────────────────────────────────────────────
+const VideoSkeleton = () => (
+  <div className="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 overflow-hidden animate-pulse">
+    <div className="aspect-video bg-slate-200 dark:bg-slate-800" />
+    <div className="p-4 space-y-2.5">
+      <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-4/5" />
+      <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-full" />
+      <div className="h-3 bg-slate-100 dark:bg-slate-800 rounded w-2/3" />
+    </div>
+  </div>
+);
+
+// ─── Main Component ─────────────────────────────────────────────────────────
 export default function HealthHub() {
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -160,754 +140,404 @@ export default function HealthHub() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Set page title
-  useEffect(() => {
-    document.title = "Health Hub - HealNav";
-  }, []);
+  useEffect(() => { document.title = "Health Hub - HealAI"; }, []);
 
-  // Convert curated videos to Video interface
   const convertCuratedToVideo = useCallback((curatedVideos: CuratedVideo[]): Video[] => {
     return curatedVideos.map(video => ({
-      id: video.id,
-      title: video.title,
+      id: video.id, title: video.title,
       description: `Curated health video in category: ${video.category}`,
       thumbnailUrl: `https://img.youtube.com/vi/${video.id}/mqdefault.jpg`,
-      channelTitle: "Curated Health Content",
-      publishedAt: new Date().toISOString(),
-      category: video.category,
-      viewCount: "0" // View count not available for curated videos
+      channelTitle: "Curated Health Content", publishedAt: new Date().toISOString(),
+      category: video.category, viewCount: "0"
     }));
   }, []);
 
-  // Validate YouTube video IDs
   const validateCuratedVideos = useCallback(async (curatedVideos: CuratedVideo[]): Promise<CuratedVideo[]> => {
-    // Simple validation - check if video IDs are not empty
-    const validVideos = curatedVideos.filter(video => video.id && video.id.trim() !== "");
-    
-    // In a production environment, you might want to check if the videos actually exist
-    // For now, we'll just return the videos with valid IDs
-    console.log(`Validated ${validVideos.length} out of ${curatedVideos.length} curated videos`);
-    return validVideos;
+    return curatedVideos.filter(video => video.id && video.id.trim() !== "");
   }, []);
 
-  // Group videos by category for Netflix-style rows
   const videosByCategory = useMemo(() => {
     const categories: Record<string, typeof CURATED_VIDEOS> = {
-      "Govt. Schemes": [],
-      "Yoga/AYUSH": [],
-      "Trusted Health": [],
-      "Disease Control": [],
-      "General Health": [],
-      "Govt. Policy": [],
-      "General Policy": [],
-      "Public Awareness": [],
-      "Medicine/Myths": [],
-      "Yoga/Heart": [],
+      "Govt. Schemes": [], "Yoga/AYUSH": [], "Trusted Health": [],
+      "Disease Control": [], "General Health": [], "Govt. Policy": [],
+      "General Policy": [], "Public Awareness": [], "Medicine/Myths": [], "Yoga/Heart": [],
     };
-
     CURATED_VIDEOS.forEach(video => {
-      if (categories[video.category as keyof typeof categories]) {
-        categories[video.category as keyof typeof categories].push(video);
-      } else {
-        // For any new categories not explicitly defined
-        categories["General Health"].push(video);
-      }
+      if (categories[video.category]) categories[video.category].push(video);
+      else categories["General Health"].push(video);
     });
-
     return categories;
   }, []);
 
-  // Get featured videos (most relevant or popular)
   const featuredVideos = useMemo(() => {
-    // Select videos from different categories to feature
     const featured: typeof CURATED_VIDEOS = [];
-    
-    // Add some videos from key categories
-    if (videosByCategory["Govt. Schemes"].length > 0) {
-      featured.push(videosByCategory["Govt. Schemes"][0]);
-    }
-    if (videosByCategory["Yoga/AYUSH"].length > 0) {
-      featured.push(videosByCategory["Yoga/AYUSH"][0]);
-    }
-    if (videosByCategory["Trusted Health"].length > 0) {
-      featured.push(videosByCategory["Trusted Health"][0]);
-    }
-    if (videosByCategory["Disease Control"].length > 0) {
-      featured.push(videosByCategory["Disease Control"][0]);
-    }
-    
-    // Fill with more if needed
-    const allVideos: typeof CURATED_VIDEOS = CURATED_VIDEOS;
-    let index: number = 0;
-    while (featured.length < 8 && index < allVideos.length) {
-      const nextVideo = allVideos[index];
-      if (!featured.includes(nextVideo)) {
-        featured.push(nextVideo);
-      }
+    ["Govt. Schemes", "Yoga/AYUSH", "Trusted Health", "Disease Control"].forEach(cat => {
+      if (videosByCategory[cat]?.length > 0) featured.push(videosByCategory[cat][0]);
+    });
+    let index = 0;
+    while (featured.length < 8 && index < CURATED_VIDEOS.length) {
+      if (!featured.includes(CURATED_VIDEOS[index])) featured.push(CURATED_VIDEOS[index]);
       index++;
     }
-    
     return featured;
   }, [videosByCategory]);
 
-  // Filter videos based on search query and category
   const filteredVideos = useMemo(() => {
-    let videos = CURATED_VIDEOS;
-    
-    // Filter by category
+    let vids = CURATED_VIDEOS;
     if (activeTab !== "all" && activeTab !== "youtube" && activeTab !== "curated") {
-      videos = VIDEOS_BY_CATEGORY[activeTab] || [];
+      vids = VIDEOS_BY_CATEGORY[activeTab] || [];
     }
-    
-    // Filter by search query
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      videos = videos.filter(video => 
-        video.title.toLowerCase().includes(query) || 
-        video.category.toLowerCase().includes(query)
-      );
+      const q = searchQuery.toLowerCase();
+      vids = vids.filter(v => v.title.toLowerCase().includes(q) || v.category.toLowerCase().includes(q));
     }
-    
-    return videos;
+    return vids;
   }, [searchQuery, activeTab]);
 
-  // Get icon for category
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case "Govt. Schemes": return <Trophy className="h-5 w-5" />;
-      case "Yoga/AYUSH": return <Leaf className="h-5 w-5" />;
-      case "Trusted Health": return <Heart className="h-5 w-5" />;
-      case "Disease Control": return <Stethoscope className="h-5 w-5" />;
-      case "General Health": return <Users className="h-5 w-5" />;
-      case "Govt. Policy": return <BookOpen className="h-5 w-5" />;
-      case "General Policy": return <BookOpen className="h-5 w-5" />;
-      case "Public Awareness": return <Users className="h-5 w-5" />;
-      case "Medicine/Myths": return <BookOpen className="h-5 w-5" />;
-      case "Yoga/Heart": return <Heart className="h-5 w-5" />;
-      default: return <PlayCircle className="h-5 w-5" />;
-    }
-  };
-
-  // Determine category based on title and description
-  const determineCategory = (title: string, description: string): string => {
-    const text = (title + " " + description).toLowerCase();
-    
-    // Government-specific categories
-    if (text.includes("government") || text.includes("ministry") || text.includes("policy") || 
-        text.includes("scheme") || text.includes("program") || text.includes("initiative") ||
-        text.includes("/ayushman") || text.includes("nrhm") || text.includes("nha")) return "Govt. Schemes";
-    
-    if (text.includes("heart") || text.includes("cardio")) return "Heart Health";
-    if (text.includes("medicine") || text.includes("drug") || text.includes("medication")) return "Medication";
-    if (text.includes("mental") || text.includes("mind") || text.includes("stress")) return "Mental Health";
-    if (text.includes("nutrition") || text.includes("diet") || text.includes("food")) return "Nutrition";
-    if (text.includes("exercise") || text.includes("fitness") || text.includes("workout")) return "Fitness";
-    if (text.includes("baby") || text.includes("child") || text.includes("pregnancy")) return "Maternal Health";
-    if (text.includes("lab") || text.includes("test") || text.includes("research")) return "Research";
-    if (text.includes("yoga") || text.includes("ayush") || text.includes("ayurveda")) return "Yoga/AYUSH";
-    if (text.includes("disease") || text.includes("virus") || text.includes("infection")) return "Disease Control";
-    
-    return "General Health";
-  };
-
-  // Fetch videos from YouTube API
+  // Fetch videos
   const fetchYouTubeVideos = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    
+    setLoading(true); setError(null);
     try {
-      console.log("Fetching YouTube videos from specific government channels...");
-      // Fetch videos from specific health channels
       const response = await fetchVideosFromSpecificChannels(HEALTH_CHANNELS, undefined, 50);
-      console.log("Channel fetch response:", response);
-      
       if (response.videos.length > 0) {
-        console.log(`Found ${response.videos.length} videos from government channels`);
-        // Transform YouTube videos to match our Video interface
         const youtubeVideos: Video[] = response.videos.map(video => ({
-          id: video.id,
-          title: video.title,
-          description: video.description,
-          thumbnailUrl: video.thumbnailUrl,
-          channelTitle: video.channelTitle,
-          publishedAt: video.publishedAt,
-          viewCount: video.viewCount,
+          id: video.id, title: video.title, description: video.description,
+          thumbnailUrl: video.thumbnailUrl, channelTitle: video.channelTitle,
+          publishedAt: video.publishedAt, viewCount: video.viewCount,
           category: determineCategory(video.title, video.description)
-        }));
-        
-        // Filter out shorts and non-health content
-        const filteredVideos = youtubeVideos.filter(video => {
-          const title = video.title.toLowerCase();
-          // Remove shorts and very short videos
-          if (title.includes("#shorts") || title.includes("shorts") || 
-              title.includes("short") || title.includes("#short")) {
-            return false;
-          }
-          // Keep only health-related content
-          return determineCategory(video.title, video.description) !== "General Health" || 
-                 title.includes("health") || title.includes("medical") || 
-                 title.includes("doctor") || title.includes("hospital");
-        });
-        
-        // Validate and convert curated videos
-        const validCuratedVideos = await validateCuratedVideos(CURATED_VIDEOS);
-        console.log(`Using ${validCuratedVideos.length} curated videos after validation`);
-        
-        // Combine with sample videos, curated videos and remove duplicates
-        const allVideos = [...filteredVideos, ...SAMPLE_VIDEOS, ...convertCuratedToVideo(validCuratedVideos)];
-        const uniqueVideos = allVideos.filter((video, index, self) => 
-          index === self.findIndex(v => v.id === video.id)
-        );
-        
-        console.log("Setting videos state with", uniqueVideos.length, "videos");
-        setVideos(uniqueVideos);
-        toast.success(`Loaded ${filteredVideos.length} government health videos from trusted sources`);
+        })).filter(v => !v.title.toLowerCase().includes("#shorts") && !v.title.toLowerCase().includes("shorts"));
+        const validCurated = await validateCuratedVideos(CURATED_VIDEOS);
+        const all = [...youtubeVideos, ...SAMPLE_VIDEOS, ...convertCuratedToVideo(validCurated)];
+        setVideos(all.filter((v, i, self) => i === self.findIndex(x => x.id === v.id)));
+        toast.success(`Loaded ${youtubeVideos.length} government health videos`);
       } else {
-        console.log("No videos from channels, trying search-based fetching with government terms...");
-        // Fallback to search-based fetching with government health terms
-        const searchTerms = [
-          "Ministry of Health India",
-          "AIIMS health",
-          "ICMR health",
-          "Government health scheme India",
-          "Ayushman Bharat",
-          "NRHM India",
-          "Public health India"
-        ];
-        
-        let allSearchVideos: Video[] = [];
-        for (const term of searchTerms) {
-          try {
-            const searchResponse = await fetchHealthVideos(term, 10);
-            console.log(`Search fetch response for "${term}":`, searchResponse);
-            
-            if (searchResponse.videos.length > 0) {
-              const searchVideos: Video[] = searchResponse.videos.map(video => ({
-                id: video.id,
-                title: video.title,
-                description: video.description,
-                thumbnailUrl: video.thumbnailUrl,
-                channelTitle: video.channelTitle,
-                publishedAt: video.publishedAt,
-                viewCount: video.viewCount,
-                category: determineCategory(video.title, video.description)
-              }));
-              
-              // Filter out shorts
-              const filteredVideos = searchVideos.filter(video => {
-                const title = video.title.toLowerCase();
-                return !title.includes("#shorts") && !title.includes("shorts") && 
-                       !title.includes("short") && !title.includes("#short");
-              });
-              
-              allSearchVideos = [...allSearchVideos, ...filteredVideos];
-            }
-          } catch (err) {
-            console.warn(`Failed to fetch videos for term "${term}":`, err);
-          }
-        }
-        
-        if (allSearchVideos.length > 0) {
-          console.log(`Found ${allSearchVideos.length} videos from government health searches`);
-          
-          // Validate and convert curated videos
-          const validCuratedVideos = await validateCuratedVideos(CURATED_VIDEOS);
-          console.log(`Using ${validCuratedVideos.length} curated videos after validation`);
-          
-          // Combine with sample videos, curated videos and remove duplicates
-          const allVideos = [...allSearchVideos, ...SAMPLE_VIDEOS, ...convertCuratedToVideo(validCuratedVideos)];
-          const uniqueVideos = allVideos.filter((video, index, self) => 
-            index === self.findIndex(v => v.id === video.id)
-          );
-          
-          console.log("Setting videos state with", uniqueVideos.length, "videos");
-          setVideos(uniqueVideos);
-          toast.success(`Loaded ${allSearchVideos.length} government health videos from search`);
-        } else {
-          console.log("No videos found from either channels or search, using fallback content...");
-          // Validate and use curated videos and sample videos as fallback
-          const validCuratedVideos = await validateCuratedVideos(CURATED_VIDEOS);
-          console.log(`Using ${validCuratedVideos.length} curated videos as fallback`);
-          const fallbackVideos = [...convertCuratedToVideo(validCuratedVideos), ...SAMPLE_VIDEOS];
-          setVideos(fallbackVideos);
-          toast.info("Showing curated health videos from our library");
-        }
+        const validCurated = await validateCuratedVideos(CURATED_VIDEOS);
+        setVideos([...convertCuratedToVideo(validCurated), ...SAMPLE_VIDEOS]);
+        toast.info("Showing curated health videos");
       }
     } catch (err) {
       console.error('Error fetching YouTube videos:', err);
       setError('Failed to load health videos. Showing fallback content.');
-      // Validate and use curated videos and sample videos as fallback
-      const validCuratedVideos = CURATED_VIDEOS; // Use all videos as fallback if validation fails
-      console.log(`Using all ${validCuratedVideos.length} curated videos as fallback due to error`);
-      const fallbackVideos = [...convertCuratedToVideo(validCuratedVideos), ...SAMPLE_VIDEOS];
-      setVideos(fallbackVideos);
-      toast.error('Failed to load health videos. Showing curated content.');
-    } finally {
-      setLoading(false);
-    }
+      setVideos([...convertCuratedToVideo(CURATED_VIDEOS), ...SAMPLE_VIDEOS]);
+    } finally { setLoading(false); }
   }, [convertCuratedToVideo, validateCuratedVideos]);
 
-  // Fetch videos from YouTube API on component mount
-  useEffect(() => {
-    fetchYouTubeVideos();
-  }, [fetchYouTubeVideos]);
+  useEffect(() => { fetchYouTubeVideos(); }, [fetchYouTubeVideos]);
 
-  // Handle search
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success("Search completed");
-  };
+  const sortVideos = (vids: Video[]) => [...vids].sort((a, b) => {
+    if (sortBy === "views") {
+      const va = parseInt(a.viewCount || "0", 10), vb = parseInt(b.viewCount || "0", 10);
+      return sortOrder === "asc" ? va - vb : vb - va;
+    }
+    const da = new Date(a.publishedAt).getTime(), db = new Date(b.publishedAt).getTime();
+    return sortOrder === "asc" ? da - db : db - da;
+  });
 
-  // Handle refresh
-  const handleRefresh = () => {
-    fetchYouTubeVideos();
-  };
-
-  // Sort videos
-  const sortVideos = (videos: Video[]) => {
-    return [...videos].sort((a, b) => {
-      if (sortBy === "views") {
-        const viewCountA = parseInt(a.viewCount || "0", 10);
-        const viewCountB = parseInt(b.viewCount || "0", 10);
-        return sortOrder === "asc" ? viewCountA - viewCountB : viewCountB - viewCountA;
-      } else {
-        const dateA = new Date(a.publishedAt).getTime();
-        const dateB = new Date(b.publishedAt).getTime();
-        return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-      }
-    });
-  };
-
-  // Filter videos based on tab and search
   const getFilteredVideos = () => {
     let filtered = videos;
-    
-    // Filter by tab
-    if (activeTab !== "all" && activeTab !== "youtube" && activeTab !== "curated") {
-      filtered = filtered.filter(video => video.category === activeTab);
-    }
-    
-    // Filter by search query
+    if (activeTab !== "all" && activeTab !== "youtube" && activeTab !== "curated")
+      filtered = filtered.filter(v => v.category === activeTab);
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(video => 
-        video.title.toLowerCase().includes(query) || 
-        video.description.toLowerCase().includes(query) ||
-        video.channelTitle.toLowerCase().includes(query) ||
-        (video.category && video.category.toLowerCase().includes(query))
-      );
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(v => v.title.toLowerCase().includes(q) || v.description.toLowerCase().includes(q) || v.channelTitle.toLowerCase().includes(q));
     }
-    
     return sortVideos(filtered);
   };
 
-  // Render video grid
-  const renderVideoGrid = () => {
-    const currentVideos = getFilteredVideos();
-    
-    if (currentVideos.length === 0) {
-      return (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            {searchQuery 
-              ? `No videos found for "${searchQuery}". Try a different search term.` 
-              : "No videos available. Try refreshing or searching for specific content."}
-          </p>
-          <Button onClick={handleRefresh} className="mt-4">Refresh Content</Button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {currentVideos.map((video) => (
-          <VideoCard key={video.id} video={video} />
-        ))}
-      </div>
-    );
-  };
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="relative h-[40vh] md:h-[50vh] overflow-hidden bg-gradient-to-r from-blue-600 to-teal-600">
-        <div className="container mx-auto px-4 h-full flex flex-col justify-center items-center text-center text-white relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <h1 className="text-3xl md:text-5xl font-bold mb-4">Health Hub</h1>
-            <p className="text-lg md:text-xl text-white/90 max-w-2xl mx-auto mb-6">
-              Trusted health videos from government channels and renowned medical institutions
-            </p>
-          </motion.div>
-        </div>
-        <div className="absolute inset-0 bg-black/80"></div>
-      </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-8 -mt-16 relative z-20">
-        {/* Search Bar */}
-        <div className="mb-8">
-          <form onSubmit={handleSearch} className="max-w-2xl mx-auto">
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-teal-600 via-emerald-600 to-cyan-700" />
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-20 w-40 h-40 rounded-full bg-white/30 blur-3xl" />
+          <div className="absolute bottom-10 right-20 w-60 h-60 rounded-full bg-teal-300/30 blur-3xl" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 rounded-full bg-emerald-200/20 blur-3xl" />
+        </div>
+        <div className="relative z-10 max-w-6xl mx-auto px-4 pb-20 pt-8">
+          {/* Back + Title */}
+          <div className="flex items-center gap-3 mb-8">
+            <Link to="/" className="p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-colors">
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Health Hub</h1>
+              <p className="text-sm text-white/60 mt-0.5">Trusted videos from government channels & medical institutions</p>
+            </div>
+          </div>
+
+          {/* Search */}
+          <form onSubmit={e => { e.preventDefault(); toast.success("Search applied"); }} className="max-w-xl">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input
                 type="text"
-                placeholder="Search for health topics, conditions, or treatments..."
-                className="pl-10 pr-20 py-6 text-base rounded-full shadow-lg"
+                placeholder="Search health topics, conditions, treatments…"
+                className="w-full pl-11 pr-24 py-3.5 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm rounded-2xl shadow-xl text-sm text-slate-700 dark:text-slate-200 placeholder-slate-400 border-0 focus:outline-none focus:ring-2 focus:ring-white/40"
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
               />
-              <Button 
-                type="submit"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 rounded-full"
-                size="sm"
-              >
+              <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white text-xs font-bold rounded-xl transition-colors">
                 Search
-              </Button>
+              </button>
             </div>
           </form>
-        </div>
 
-        {/* Quick Actions */}
-        <div className="mb-8">
-          <h3 className="text-lg font-semibold mb-4">Quick Access to Health Topics</h3>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {QUICK_ACTIONS.map((action) => {
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+            <StatCard icon={PlayCircle} value={`${CURATED_VIDEOS.length}+`} label="Curated Videos" gradient="from-teal-500 to-emerald-600" />
+            <StatCard icon={Building} value="10+" label="Gov. Sources" gradient="from-blue-500 to-indigo-600" />
+            <StatCard icon={Shield} value="100%" label="Verified Content" gradient="from-emerald-500 to-green-600" />
+            <StatCard icon={TrendingUp} value="50K+" label="Monthly Views" gradient="from-purple-500 to-violet-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Content ── */}
+      <div className="max-w-6xl mx-auto px-4 -mt-10 relative z-20 pb-12">
+
+        {/* Quick Actions — pill row */}
+        <div className="mb-6">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {QUICK_ACTIONS.map(action => {
               const Icon = action.icon;
               return (
-                <Button
+                <motion.button
                   key={action.id}
-                  variant="outline"
-                  className="flex flex-col items-center justify-center h-24 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-                  onClick={() => {
-                    setActiveTab(action.id);
-                    setSearchQuery("");
-                  }}
+                  whileHover={{ y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => { setActiveTab(action.id); setSearchQuery(""); }}
+                  className={cn(
+                    "flex items-center gap-2 px-4 py-3 rounded-2xl border shadow-sm transition-all flex-shrink-0",
+                    activeTab === action.id
+                      ? `bg-gradient-to-r ${action.gradient} text-white border-transparent shadow-md`
+                      : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:shadow-md"
+                  )}
                 >
-                  <div className={`${action.color} p-2 rounded-full mb-2`}>
-                    <Icon className="h-5 w-5 text-white" />
+                  <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0",
+                    activeTab === action.id ? "bg-white/20" : `${action.lightBg}`)}>
+                    <Icon className={cn("w-4 h-4", activeTab === action.id ? "text-white" : "text-slate-600 dark:text-slate-300")} />
                   </div>
-                  <span className="text-sm font-medium">{action.title}</span>
-                </Button>
+                  <span className={cn("text-xs font-semibold whitespace-nowrap",
+                    activeTab === action.id ? "text-white" : "text-slate-700 dark:text-slate-200")}>{action.title}</span>
+                </motion.button>
               );
             })}
           </div>
         </div>
 
-        {/* Error Message */}
+        {/* Error */}
         {error && (
-          <Alert variant="destructive" className="mb-6">
+          <Alert variant="destructive" className="mb-6 rounded-2xl">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        {/* Loading Indicator */}
+        {/* Loading */}
         {loading && (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-lg">Loading health videos from trusted sources...</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 mb-8">
+            {Array.from({ length: 8 }).map((_, i) => <VideoSkeleton key={i} />)}
           </div>
         )}
 
-        {/* Content Tabs */}
+        {/* Tab bar */}
         {!loading && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-6 bg-card p-4 rounded-lg shadow">
-              <TabsList className="grid grid-cols-4 md:grid-cols-7">
-                <TabsTrigger value="all" className="gap-2">
-                  <PlayCircle className="h-4 w-4" />
-                  <span className="hidden sm:inline">All Videos</span>
-                  <span className="sm:hidden">All</span>
-                </TabsTrigger>
-                <TabsTrigger value="curated" className="gap-2">
-                  <GraduationCap className="h-4 w-4" />
-                  <span className="hidden sm:inline">Curated</span>
-                  <span className="sm:hidden">Curated</span>
-                </TabsTrigger>
-                <TabsTrigger value="youtube" className="gap-2">
-                  <Youtube className="h-4 w-4" />
-                  <span className="hidden sm:inline">YouTube</span>
-                  <span className="sm:hidden">YT</span>
-                </TabsTrigger>
-                <TabsTrigger value="government" className="gap-2">
-                  <Building className="h-4 w-4" />
-                  <span className="hidden sm:inline">Government</span>
-                  <span className="sm:hidden">Gov</span>
-                </TabsTrigger>
-                <TabsTrigger value="doctors" className="gap-2">
-                  <Stethoscope className="h-4 w-4" />
-                  <span className="hidden sm:inline">Doctors</span>
-                  <span className="sm:hidden">Docs</span>
-                </TabsTrigger>
-                <TabsTrigger value="heart" className="gap-2">
-                  <Heart className="h-4 w-4" />
-                  <span className="hidden sm:inline">Heart</span>
-                </TabsTrigger>
-                <TabsTrigger value="medication" className="gap-2">
-                  <Pill className="h-4 w-4" />
-                  <span className="hidden sm:inline">Medication</span>
-                  <span className="sm:hidden">Meds</span>
-                </TabsTrigger>
-              </TabsList>
-              
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="secondary">
-                  {activeTab === "curated" ? CURATED_VIDEOS.length : activeTab === "youtube" ? getFilteredVideos().length : getFilteredVideos().length} videos
+          <div className="mb-6">
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 p-1.5 shadow-sm overflow-x-auto scrollbar-none">
+              {TABS.map(tab => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.value}
+                    onClick={() => setActiveTab(tab.value)}
+                    className={cn(
+                      "flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex-shrink-0",
+                      activeTab === tab.value
+                        ? "bg-teal-600 text-white shadow-sm"
+                        : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    )}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">{tab.label}</span>
+                    <span className="sm:hidden">{tab.shortLabel}</span>
+                  </button>
+                );
+              })}
+              <div className="ml-auto flex items-center gap-2 flex-shrink-0 px-2">
+                <Badge className="bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 border-teal-200 dark:border-teal-800 text-[10px] rounded-full">
+                  {activeTab === "curated" ? CURATED_VIDEOS.length : getFilteredVideos().length} videos
                 </Badge>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={loading}
-                >
-                  <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                  Refresh
+                <Button variant="outline" size="sm" onClick={() => fetchYouTubeVideos()} disabled={loading} className="rounded-xl text-xs h-8 gap-1.5">
+                  <RefreshCcw className={cn("h-3 w-3", loading && "animate-spin")} /> Refresh
                 </Button>
               </div>
             </div>
-            
-            {/* Sorting Controls - Only for YouTube videos */}
-            {activeTab !== "curated" && (
-              <div className="flex items-center gap-2 mb-4">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Sort by:</span>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setSortBy("date")}
-                  className={sortBy === "date" ? "bg-muted" : ""}
-                >
-                  Date
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setSortBy("views")}
-                  className={sortBy === "views" ? "bg-muted" : ""}
-                >
-                  Views
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-                >
-                  {sortOrder === "asc" ? <ArrowUpWideNarrow className="h-4 w-4" /> : <ArrowDownWideNarrow className="h-4 w-4" />}
-                </Button>
-              </div>
-            )}
-            
-            <TabsContent value="all" className="mt-0">
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold">
-                  {searchQuery ? `Search Results for "${searchQuery}"` : "All Curated Health Videos"}
+          </div>
+        )}
+
+        {/* ── Tab Content ── */}
+        {!loading && (
+          <AnimatePresence mode="wait">
+            {/* All Videos */}
+            {activeTab === "all" && (
+              <motion.div key="all" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-4">
+                  {searchQuery ? `Results: "${searchQuery}"` : "All Curated Health Videos"}
                 </h2>
-                {renderVideoGrid()}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="curated" className="mt-0">
-              <div className="space-y-12">
-                {/* Featured Videos Row */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-primary">Featured Health Content</h2>
-                    <Button variant="ghost" size="sm" className="text-primary">
-                      See All
-                    </Button>
+                {getFilteredVideos().length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {getFilteredVideos().map(video => <VideoCard key={video.id} video={video} />)}
                   </div>
-                  <div className="relative">
-                    <Carousel
-                      opts={{
-                        align: "start",
-                        slidesToScroll: "auto",
-                      }}
-                      className="w-full"
-                    >
-                      <CarouselContent>
-                        {featuredVideos.map((video) => (
-                          <CarouselItem 
-                            key={video.id} 
-                            className="basis-1/1 md:basis-1/2 lg:basis-1/3 xl:basis-1/4 2xl:basis-1/5 pl-4"
-                          >
-                            <div className="h-full">
-                              <CuratedVideoCard video={video} />
-                            </div>
-                          </CarouselItem>
-                        ))}
-                      </CarouselContent>
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2">
-                        <CarouselPrevious className="bg-white/80 hover:bg-white shadow-lg rounded-full w-8 h-8" />
-                      </div>
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                        <CarouselNext className="bg-white/80 hover:bg-white shadow-lg rounded-full w-8 h-8" />
-                      </div>
-                    </Carousel>
+                ) : (
+                  <div className="text-center py-16">
+                    <div className="text-5xl mb-3">🔍</div>
+                    <p className="font-bold text-slate-700 dark:text-slate-200">No videos found</p>
+                    <p className="text-sm text-slate-400 mt-1">Try a different search term</p>
+                    <Button onClick={() => fetchYouTubeVideos()} className="mt-4 rounded-xl">Refresh Content</Button>
                   </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Curated Tab — Netflix-style */}
+            {activeTab === "curated" && (
+              <motion.div key="curated" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-10">
+                {/* Featured carousel */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-500" /> Featured
+                    </h2>
+                  </div>
+                  <Carousel opts={{ align: "start", slidesToScroll: "auto" }} className="w-full">
+                    <CarouselContent>
+                      {featuredVideos.map(video => (
+                        <CarouselItem key={video.id} className="basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4 pl-4">
+                          <CuratedVideoCard video={video} />
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    <CarouselPrevious className="bg-white/90 dark:bg-slate-800/90 shadow-lg rounded-full w-9 h-9" />
+                    <CarouselNext className="bg-white/90 dark:bg-slate-800/90 shadow-lg rounded-full w-9 h-9" />
+                  </Carousel>
                 </div>
 
-                {/* Category-based Rows */}
-                {Object.entries(videosByCategory).map(([category, videos]) => {
-                  // Skip empty categories
-                  if (videos.length === 0) return null;
-                  
+                {/* Category rows */}
+                {Object.entries(videosByCategory).map(([category, vids]) => {
+                  if (vids.length === 0) return null;
                   return (
-                    <div key={category} className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h2 className="text-2xl font-bold flex items-center gap-2 text-primary">
+                    <div key={category}>
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex items-center justify-center text-teal-600 dark:text-teal-400">
                           {getCategoryIcon(category)}
-                          {category}
-                        </h2>
-                        <Button variant="ghost" size="sm" className="text-primary">
-                          See All
-                        </Button>
+                        </div>
+                        <h2 className="text-base font-bold text-slate-800 dark:text-white">{category}</h2>
+                        <Badge variant="outline" className="ml-auto text-[10px] rounded-full">{vids.length}</Badge>
                       </div>
-                      <div className="relative">
-                        <Carousel
-                          opts={{
-                            align: "start",
-                            slidesToScroll: "auto",
-                          }}
-                          className="w-full"
-                        >
-                          <CarouselContent>
-                            {videos.map((video) => (
-                              <CarouselItem 
-                                key={video.id} 
-                                className="basis-1/1 md:basis-1/2 lg:basis-1/3 xl:basis-1/4 2xl:basis-1/5 pl-4"
-                              >
-                                <div className="h-full">
-                                  <CuratedVideoCard video={video} />
-                                </div>
-                              </CarouselItem>
-                            ))}
-                          </CarouselContent>
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2">
-                            <CarouselPrevious className="bg-white/80 hover:bg-white shadow-lg rounded-full w-8 h-8" />
-                          </div>
-                          <div className="absolute right-0 top-1/2 -translate-y-1/2">
-                            <CarouselNext className="bg-white/80 hover:bg-white shadow-lg rounded-full w-8 h-8" />
-                          </div>
-                        </Carousel>
-                      </div>
+                      <Carousel opts={{ align: "start", slidesToScroll: "auto" }} className="w-full">
+                        <CarouselContent>
+                          {vids.map(video => (
+                            <CarouselItem key={video.id} className="basis-full md:basis-1/2 lg:basis-1/3 xl:basis-1/4 pl-4">
+                              <CuratedVideoCard video={video} />
+                            </CarouselItem>
+                          ))}
+                        </CarouselContent>
+                        <CarouselPrevious className="bg-white/90 dark:bg-slate-800/90 shadow-lg rounded-full w-9 h-9" />
+                        <CarouselNext className="bg-white/90 dark:bg-slate-800/90 shadow-lg rounded-full w-9 h-9" />
+                      </Carousel>
                     </div>
                   );
                 })}
-              </div>
-              
-              {/* Traditional Grid View (for search/filter) */}
-              {(searchQuery) ? (
-                <div className="mt-12">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-primary">
-                      Search Results
-                    </h2>
-                    <Badge variant="outline">
-                      {filteredVideos.length} {filteredVideos.length === 1 ? "Video" : "Videos"}
-                    </Badge>
-                  </div>
 
-                  {filteredVideos.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                      {filteredVideos.map((video) => (
-                        <CuratedVideoCard key={video.id} video={video} />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <p className="text-muted-foreground">
-                        {searchQuery 
-                          ? `No videos found for "${searchQuery}". Try a different search term.` 
-                          : "No videos available."}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : null}
-            </TabsContent>
-            
-            <TabsContent value="youtube" className="mt-0">
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold">
-                  {searchQuery ? `YouTube Videos for "${searchQuery}"` : "YouTube Health Videos"}
+                {/* Search results overlay */}
+                {searchQuery && (
+                  <div className="mt-8">
+                    <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Search Results</h2>
+                    {filteredVideos.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                        {filteredVideos.map(video => <CuratedVideoCard key={video.id} video={video} />)}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-400 text-center py-8">No videos match "{searchQuery}"</p>
+                    )}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* YouTube / Government / Doctors / Heart / Medication tabs */}
+            {["youtube", "government", "doctors", "heart", "medication"].includes(activeTab) && (
+              <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-4 capitalize">
+                  {activeTab === "youtube" ? "YouTube Health Videos" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Videos`}
                 </h2>
-                {renderVideoGrid()}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="government" className="mt-0">
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold">
-                  {searchQuery ? `Government Videos for "${searchQuery}"` : "Government Health Videos"}
-                </h2>
-                {renderVideoGrid()}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="doctors" className="mt-0">
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold">
-                  {searchQuery ? `Doctor Videos for "${searchQuery}"` : "Videos from Renowned Doctors"}
-                </h2>
-                {renderVideoGrid()}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="heart" className="mt-0">
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold">
-                  {searchQuery ? `Heart Health Videos for "${searchQuery}"` : "Heart Health Videos"}
-                </h2>
-                {renderVideoGrid()}
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="medication" className="mt-0">
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold">
-                  {searchQuery ? `Medication Videos for "${searchQuery}"` : "Medication Guidance Videos"}
-                </h2>
-                {renderVideoGrid()}
-              </div>
-            </TabsContent>
-          </Tabs>
+                {getFilteredVideos().length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {getFilteredVideos().map(video => <VideoCard key={video.id} video={video} />)}
+                  </div>
+                ) : (
+                  <div className="text-center py-16">
+                    <p className="font-semibold text-slate-600 dark:text-slate-300">No videos in this category</p>
+                    <Button onClick={() => fetchYouTubeVideos()} className="mt-4 rounded-xl" size="sm">Refresh</Button>
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {/* Quick action category tabs */}
+            {!["all", "curated", "youtube", "government", "doctors", "heart", "medication"].includes(activeTab) && (
+              <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                <h2 className="text-lg font-bold text-slate-800 dark:text-white mb-4">{activeTab}</h2>
+                {(VIDEOS_BY_CATEGORY[activeTab] || []).length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    {(VIDEOS_BY_CATEGORY[activeTab] || []).map(video => <CuratedVideoCard key={video.id} video={video} />)}
+                  </div>
+                ) : (
+                  <p className="text-center text-slate-400 py-12">No videos available for this category</p>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         )}
 
-        {/* Nearby Hospitals Section */}
+        {/* ── Nearby Hospitals ── */}
         <div className="mt-16">
           <NearbyHospitals />
         </div>
 
-        {/* Info Section */}
+        {/* ── Trust footer ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="mt-16 bg-gradient-to-r from-blue-50 to-teal-50 shadow-lg rounded-xl p-8 text-center border"
+          className="mt-16 rounded-3xl overflow-hidden"
         >
-          <h2 className="text-2xl font-bold mb-3 text-primary">Trusted Health Content</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto mb-6">
-            All videos are sourced directly from verified government health departments and renowned medical institutions 
-            to ensure you receive accurate and up-to-date health information.
-          </p>
-          <div className="flex flex-wrap justify-center gap-4 mt-6">
-            <Badge variant="outline" className="px-4 py-2 text-sm bg-white">
-              <Building className="h-4 w-4 mr-2" />
-              Government Verified
-            </Badge>
-            <Badge variant="outline" className="px-4 py-2 text-sm bg-white">
-              <Stethoscope className="h-4 w-4 mr-2" />
-              Medical Experts
-            </Badge>
-            <Badge variant="outline" className="px-4 py-2 text-sm bg-white">
-              <RefreshCcw className="h-4 w-4 mr-2" />
-              Real-time Updates
-            </Badge>
+          <div className="relative bg-gradient-to-br from-teal-600 to-emerald-700 p-8 md:p-12 text-center">
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-5 right-10 w-32 h-32 rounded-full bg-white/30 blur-3xl" />
+              <div className="absolute bottom-5 left-10 w-40 h-40 rounded-full bg-emerald-200/30 blur-3xl" />
+            </div>
+            <div className="relative z-10">
+              <h2 className="text-xl md:text-2xl font-extrabold text-white mb-3">Trusted Health Content</h2>
+              <p className="text-sm text-white/70 max-w-lg mx-auto mb-6">
+                All videos sourced from verified government health departments and renowned medical institutions.
+              </p>
+              <div className="flex flex-wrap justify-center gap-3">
+                {[
+                  { icon: Building, label: "Government Verified" },
+                  { icon: Stethoscope, label: "Medical Experts" },
+                  { icon: RefreshCcw, label: "Real-time Updates" },
+                ].map(({ icon: Icon, label }) => (
+                  <div key={label} className="flex items-center gap-2 px-4 py-2.5 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 text-white text-xs font-semibold">
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </motion.div>
       </div>

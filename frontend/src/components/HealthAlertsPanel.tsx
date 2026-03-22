@@ -81,7 +81,7 @@ Rules:
 - type must be one of: advisory, update, emergency, awareness
 - Start with { and end with }. No other text.`;
 
-  const text = await callGemini(prompt);
+  const text = await callGemini(prompt, undefined, undefined, "daily-insight");
   const jsonStart = text.indexOf("{");
   const jsonEnd = text.lastIndexOf("}") + 1;
   if (jsonStart === -1 || jsonEnd === 0) throw new Error("No JSON in response");

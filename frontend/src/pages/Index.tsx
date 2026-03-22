@@ -22,10 +22,6 @@ import {
   X,
   User,
   MessageCircle,
-  Send,
-  Minimize2,
-  LogOut,
-  Settings,
   Newspaper,
   Star,
   FileText,
@@ -34,20 +30,12 @@ import {
 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { cn } from "@/lib/utils";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
 import { GoogleTranslate } from "@/components/GoogleTranslate";
 import { DailyInsightCard } from "@/components/DailyInsightCard";
 import { LocationPickerModal } from "@/components/LocationPickerModal";
 import { useUserLocation } from "@/hooks/useUserLocation";
+import { UserProfileComponent, type UserProfile } from "@/components/UserProfileComponent";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 
 // Typewriter effect hook
 const useTypewriter = (words: string[], typingSpeed = 100, deletingSpeed = 50, pauseTime = 2000) => {
@@ -112,119 +100,23 @@ const FloatingStatCard = ({
 
 // AI Chat Bubble Component
 const AIChatBubble = () => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<{role: "user" | "assistant", content: string}[]>([
-    { role: "assistant", content: "Hello! I'm your AI health assistant. How can I help you today?" }
-  ]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const handleSend = () => {
-    if (!message.trim()) return;
-    setMessages(prev => [...prev, { role: "user", content: message }]);
-    setTimeout(() => {
-      setMessages(prev => [...prev, { 
-        role: "assistant", 
-        content: "Thank you for your question. For detailed medical advice, please use our AI Symptom Checker or Medical Chatbot. Would you like me to direct you there?" 
-      }]);
-    }, 1000);
-    setMessage("");
-  };
-
   return (
-    <>
+    <Link to="/medical-bot">
       <motion.button
-        onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full",
-          "bg-teal-600 hover:bg-teal-700",
-          "shadow-lg shadow-teal-600/20",
+          "bg-gradient-to-br from-teal-500 to-emerald-600",
+          "shadow-lg shadow-teal-600/30",
           "flex items-center justify-center",
-          "transition-colors duration-200"
+          "transition-all duration-200 hover:shadow-xl hover:shadow-teal-600/40 hover:scale-105"
         )}
-        whileTap={{ scale: 0.95 }}
-        aria-label="Open AI Chat"
+        whileTap={{ scale: 0.93 }}
+        whileHover={{ scale: 1.08 }}
+        aria-label="Open AI Medical Chat"
       >
-        {isOpen ? (
-          <Minimize2 className="w-5 h-5 text-white" />
-        ) : (
-          <MessageCircle className="w-5 h-5 text-white" />
-        )}
+        <MessageCircle className="w-5 h-5 text-white" />
       </motion.button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: 16, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 16, scale: 0.96 }}
-            transition={{ duration: 0.2 }}
-            className={cn(
-              "fixed bottom-24 right-6 z-50 w-80 sm:w-[360px]",
-              "bg-white dark:bg-slate-900 rounded-2xl",
-              "border border-slate-200 dark:border-slate-700",
-              "shadow-xl overflow-hidden"
-            )}
-          >
-            <div className="bg-teal-600 p-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white text-sm">AI Health Assistant</h3>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
-                    <p className="text-xs text-white/70">Online</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="h-60 overflow-y-auto p-4 space-y-3">
-              {messages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={cn(
-                    "max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed",
-                    msg.role === "user" 
-                      ? "ml-auto bg-teal-600 text-white rounded-br-md"
-                      : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-bl-md"
-                  )}
-                >
-                  {msg.content}
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <div className="p-3 border-t border-slate-200 dark:border-slate-700">
-              <div className="flex gap-2">
-                <Input
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  placeholder="Type your question..."
-                  className="flex-1 rounded-full text-sm h-9"
-                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                />
-                <Button onClick={handleSend} size="icon" className="rounded-full bg-teal-600 hover:bg-teal-700 h-9 w-9">
-                  <Send className="w-3.5 h-3.5" />
-                </Button>
-              </div>
-              <Link to="/medical-bot" className="block mt-2" onClick={() => setIsOpen(false)}>
-                <p className="text-xs text-center text-teal-600 dark:text-teal-400 hover:underline">
-                  Open full AI Medical Chat
-                </p>
-              </Link>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+    </Link>
   );
 };
 
@@ -269,8 +161,11 @@ const FeatureCard = ({
 
 const Index = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [savedProfile, setSavedProfile] = useState<UserProfile | null>(() => {
+    try { return JSON.parse(localStorage.getItem("userProfile") || "null"); } catch { return null; }
+  });
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
@@ -287,6 +182,7 @@ const Index = () => {
     { name: "AI Chat", path: "/medical-bot", icon: Bot },
     { name: "Health Hub", path: "/health-hub", icon: Video },
     { name: "Education", path: "/education", icon: BookOpen },
+    { name: "Resources", path: "/resources", icon: MapPin },
   ];
 
   const typewriterText = useTypewriter([
@@ -314,6 +210,26 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-[#FAFAF7] dark:bg-[#0C1210]">
+      {/* Profile Side Sheet */}
+      <Sheet open={profileOpen} onOpenChange={setProfileOpen}>
+        <SheetContent side="right" className="w-full sm:max-w-[460px] overflow-y-auto p-0">
+          <SheetHeader className="px-6 pt-6 pb-4 border-b border-slate-200 dark:border-slate-800">
+            <SheetTitle className="flex items-center gap-2 text-lg font-bold">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                <User className="w-4 h-4 text-white" />
+              </div>
+              Health Profile
+            </SheetTitle>
+            <SheetDescription className="text-sm text-slate-500 dark:text-slate-400">
+              Your personal health information is saved locally on your device.
+            </SheetDescription>
+          </SheetHeader>
+          <div className="px-6 py-4">
+            <UserProfileComponent onChange={(p) => setSavedProfile(p)} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Location picker modal — shown until user confirms city */}
       {!locationLoading && !confirmed && (
         <LocationPickerModal onConfirm={(c, r, co) => confirmLocation(c, r, co)} />
@@ -378,7 +294,7 @@ const Index = () => {
             {/* Right actions */}
             <div className="flex items-center gap-1.5">
               {/* Location indicator */}
-              {city && (
+              {city ? (
                 <button
                   onClick={resetLocation}
                   className="hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
@@ -386,6 +302,15 @@ const Index = () => {
                 >
                   <MapPin className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
                   <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">{city}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={resetLocation}
+                  className="hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-900/20 border border-slate-200/60 dark:border-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-900/40 transition-colors"
+                  title="Set location"
+                >
+                  <MapPin className="w-3 h-3 text-slate-500" />
+                  <span className="text-xs text-slate-500 font-medium">Set Location</span>
                 </button>
               )}
 
@@ -395,45 +320,21 @@ const Index = () => {
 
               <ModeToggle />
 
-              {isLoggedIn ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="rounded-full h-9 w-9">
-                      <Avatar className="w-7 h-7">
-                        <AvatarImage src="/avatar.png" alt="User" />
-                        <AvatarFallback className="bg-teal-50 text-teal-700 dark:bg-teal-900/40 dark:text-teal-300 text-xs">
-                          <User className="w-3.5 h-3.5" />
-                        </AvatarFallback>
-                      </Avatar>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuLabel className="text-xs">My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-sm">
-                      <User className="w-3.5 h-3.5 mr-2" /> Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-sm">
-                      <Settings className="w-3.5 h-3.5 mr-2" /> Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="text-sm">
-                      <Heart className="w-3.5 h-3.5 mr-2" /> Health Records
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setIsLoggedIn(false)} className="text-sm text-red-600 dark:text-red-400">
-                      <LogOut className="w-3.5 h-3.5 mr-2" /> Sign Out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ) : (
-                <Button
-                  onClick={() => setIsLoggedIn(true)}
-                  size="sm"
-                  className="rounded-full px-4 text-xs font-semibold bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white shadow-sm shadow-teal-600/20"
-                >
-                  Sign In
-                </Button>
-              )}
+              {/* Profile / Avatar button — always visible, opens Sheet */}
+              <button
+                onClick={() => setProfileOpen(true)}
+                className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-br from-teal-500 to-emerald-600 shadow-md shadow-teal-600/20 hover:shadow-teal-600/40 transition-all duration-200 border-2 border-white dark:border-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+                aria-label="Open health profile"
+                title="Health Profile"
+              >
+                {savedProfile?.name ? (
+                  <span className="text-white text-xs font-bold select-none">
+                    {savedProfile.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </span>
+                ) : (
+                  <User className="w-4 h-4 text-white" />
+                )}
+              </button>
 
               <Button variant="ghost" size="icon" className="md:hidden h-9 w-9" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
                 {mobileMenuOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
@@ -621,7 +522,7 @@ const Index = () => {
       <section className="py-12 border-t border-slate-200/60 dark:border-slate-800/40">
         <div className="container mx-auto px-4">
           {/* Location banner */}
-          {city && (
+          {city ? (
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -636,6 +537,23 @@ const Index = () => {
                 className="text-xs text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-300 underline ml-1"
               >
                 Change
+              </button>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 mb-6 px-4 py-2 rounded-full bg-slate-50 dark:bg-slate-900/20 border border-slate-200/50 dark:border-slate-800/40 w-fit mx-auto"
+            >
+              <MapPin className="w-3.5 h-3.5 text-slate-500" />
+              <span className="text-sm text-slate-600 dark:text-slate-400 font-medium">
+                Provide a location for personalized insights.
+              </span>
+              <button
+                onClick={resetLocation}
+                className="text-xs text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-300 underline ml-1"
+              >
+                Set Location
               </button>
             </motion.div>
           )}
@@ -864,7 +782,7 @@ const Index = () => {
               <span className="cursor-default">Terms</span>
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500">
-              2024 HealAI. All rights reserved.
+              2026 HealAI. All rights reserved.
             </p>
           </div>
         </div>

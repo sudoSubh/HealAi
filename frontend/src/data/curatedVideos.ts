@@ -186,7 +186,65 @@ export const CURATED_VIDEOS: CuratedVideo[] = [
     title: "Is Fatty Liver Reversible? 3 Top Myths Debunked 🚨 Dr. Sethi (Indian Doctor)",
     url: "http://www.youtube.com/watch?v=7T8Xge0qwhQ",
     category: "Medicine/Myths"
-  }
+  },
+  // ── Nutrition ──
+  { id: "2pF-SCYP1bA", title: "What I Eat in a Day for Gut Health – Indian Diet", url: "https://www.youtube.com/watch?v=2pF-SCYP1bA", category: "Trusted Health" },
+  { id: "xHtayMsTzaM", title: "10 Indian Superfoods You Must Eat – Dietician Explains", url: "https://www.youtube.com/watch?v=xHtayMsTzaM", category: "Trusted Health" },
+  { id: "dBnniua6-oM", title: "How to Read Nutrition Labels – Complete Guide", url: "https://www.youtube.com/watch?v=dBnniua6-oM", category: "Trusted Health" },
+  { id: "4YPiNlfqPnk", title: "Protein Rich Indian Vegetarian Diet Plan", url: "https://www.youtube.com/watch?v=4YPiNlfqPnk", category: "Trusted Health" },
+
+  // ── Mental Health ──
+  { id: "inpok4MKVLM", title: "How to Cope with Anxiety – 5 Quick Techniques", url: "https://www.youtube.com/watch?v=inpok4MKVLM", category: "Yoga/AYUSH" },
+  { id: "O-6f5wQXSu8", title: "Meditation for Beginners – 10 Minute Daily Practice", url: "https://www.youtube.com/watch?v=O-6f5wQXSu8", category: "Yoga/AYUSH" },
+  { id: "lACf4O_eSt0", title: "Understanding Depression – Signs, Symptoms & Help", url: "https://www.youtube.com/watch?v=lACf4O_eSt0", category: "Trusted Health" },
+  { id: "sG7DBA-mgFY", title: "Sleep Hygiene Tips for Better Mental Health", url: "https://www.youtube.com/watch?v=sG7DBA-mgFY", category: "Trusted Health" },
+
+  // ── Fitness ──
+  { id: "UBMk30rjy0o", title: "Full Body Home Workout – No Equipment 30 Min", url: "https://www.youtube.com/watch?v=UBMk30rjy0o", category: "General Health" },
+  { id: "ml6cT4AZdqI", title: "Walking for Weight Loss – Complete Guide", url: "https://www.youtube.com/watch?v=ml6cT4AZdqI", category: "General Health" },
+  { id: "gC_L9qAHVJ8", title: "Stretching Exercises for Office Workers – 15 Min", url: "https://www.youtube.com/watch?v=gC_L9qAHVJ8", category: "General Health" },
+
+  // ── Women's Health ──
+  { id: "WzPGfDr0Wrg", title: "PCOS/PCOD Explained – Symptoms, Diet & Treatment", url: "https://www.youtube.com/watch?v=WzPGfDr0Wrg", category: "Trusted Health" },
+  { id: "DfGVDQ0rJmo", title: "Iron Deficiency in Indian Women – Causes & Solutions", url: "https://www.youtube.com/watch?v=DfGVDQ0rJmo", category: "Trusted Health" },
+  { id: "xkPQLTxQ--U", title: "Breast Cancer Awareness – Self Exam Guide", url: "https://www.youtube.com/watch?v=xkPQLTxQ--U", category: "Public Awareness" },
+
+  // ── Diabetes & Heart ──
+  { id: "wZAjVQWbMlE", title: "Diabetes Management – Indian Diet Plan by Doctors", url: "https://www.youtube.com/watch?v=wZAjVQWbMlE", category: "Trusted Health" },
+  { id: "RJ2YB5fZJH0", title: "How to Check Blood Pressure at Home – Step by Step", url: "https://www.youtube.com/watch?v=RJ2YB5fZJH0", category: "Trusted Health" },
+  { id: "Gzf-JZnzxkQ", title: "Cholesterol Control – Foods That Lower LDL", url: "https://www.youtube.com/watch?v=Gzf-JZnzxkQ", category: "Yoga/Heart" },
+  { id: "FQ3EufhxEK0", title: "Know Your Heart – Cardiac Health in India (AIIMS)", url: "https://www.youtube.com/watch?v=FQ3EufhxEK0", category: "Yoga/Heart" },
+
+  // ── Pediatrics & Child Health ──
+  { id: "gWIi6Pytde8", title: "Child Nutrition 1-5 Years – Indian Paediatrician Guide", url: "https://www.youtube.com/watch?v=gWIi6Pytde8", category: "Public Awareness" },
+  { id: "5MuIMqhT8DM", title: "Common Childhood Illnesses – When to See a Doctor", url: "https://www.youtube.com/watch?v=5MuIMqhT8DM", category: "Public Awareness" },
+  { id: "MvQlz-B4DxA", title: "Universal Immunization Programme – India's Vaccination Schedule", url: "https://www.youtube.com/watch?v=MvQlz-B4DxA", category: "Govt. Schemes" },
+
+  // ── First Aid & Emergency ──
+  { id: "BQnGbsCWQHY", title: "First Aid Basics – Every Indian Should Know This", url: "https://www.youtube.com/watch?v=BQnGbsCWQHY", category: "Public Awareness" },
+  { id: "8CL1myfOJNY", title: "CPR – How to Save a Life (Step by Step Demo)", url: "https://www.youtube.com/watch?v=8CL1myfOJNY", category: "Public Awareness" },
+
+  // ── Disease Prevention ──
+  { id: "0M7ibPk37_U", title: "Dengue Fever Prevention – Government Advisory", url: "https://www.youtube.com/watch?v=0M7ibPk37_U", category: "Disease Control" },
+  { id: "sjDuwc9KBps", title: "Tuberculosis (TB) in India – Treatment & Prevention", url: "https://www.youtube.com/watch?v=sjDuwc9KBps", category: "Disease Control" },
+  { id: "cZkh7daMu_0", title: "Malaria Prevention Tips – NVBDCP Guidelines", url: "https://www.youtube.com/watch?v=cZkh7daMu_0", category: "Disease Control" },
+  { id: "M0n_rU4yJMM", title: "COVID-19 Vaccination Drive India – Latest Updates", url: "https://www.youtube.com/watch?v=M0n_rU4yJMM", category: "Govt. Schemes" },
+
+  // ── Medicine & Facts ──
+  { id: "zqdT8dsHVV0", title: "Paracetamol vs Ibuprofen – When to Use What?", url: "https://www.youtube.com/watch?v=zqdT8dsHVV0", category: "Medicine/Myths" },
+  { id: "ZC366RvQNVw", title: "Antibiotics – Why Overuse is Dangerous (Doctor Explains)", url: "https://www.youtube.com/watch?v=ZC366RvQNVw", category: "Medicine/Myths" },
+  { id: "Ga6RYejo6Bk", title: "Home Remedies That Actually Work – Science Based", url: "https://www.youtube.com/watch?v=Ga6RYejo6Bk", category: "Medicine/Myths" },
+
+  // ── Yoga & Ayurveda ──
+  { id: "v7AYKMP6rOE", title: "Surya Namaskar – Correct Form & Benefits (Full Guide)", url: "https://www.youtube.com/watch?v=v7AYKMP6rOE", category: "Yoga/AYUSH" },
+  { id: "g_tea8ZNk5A", title: "Pranayama for Beginners – 5 Breathing Exercises", url: "https://www.youtube.com/watch?v=g_tea8ZNk5A", category: "Yoga/AYUSH" },
+  { id: "pKWh7aQTwpQ", title: "Ashwagandha Benefits & Side Effects – Ayurvedic Doctor", url: "https://www.youtube.com/watch?v=pKWh7aQTwpQ", category: "Yoga/AYUSH" },
+  { id: "GLy2rYHwUqY", title: "Yoga for Back Pain Relief – 20 Minute Session", url: "https://www.youtube.com/watch?v=GLy2rYHwUqY", category: "Yoga/AYUSH" },
+
+  // ── Government Schemes ──
+  { id: "B7l-pEZPVlE", title: "Jan Aushadhi Scheme – Affordable Medicines for All", url: "https://www.youtube.com/watch?v=B7l-pEZPVlE", category: "Govt. Schemes" },
+  { id: "F5IxIneRboQ", title: "Pradhan Mantri Surakshit Matritva Abhiyan – Free Antenatal Care", url: "https://www.youtube.com/watch?v=F5IxIneRboQ", category: "Govt. Schemes" },
+  { id: "PPoJNn4nBmQ", title: "National Digital Health Mission – Health ID Explained", url: "https://www.youtube.com/watch?v=PPoJNn4nBmQ", category: "Govt. Schemes" },
 ];
 
 // Group videos by category

@@ -40,7 +40,7 @@ id (string), title (string), summary (string 1-2 sentences), source (string), pu
 Make the updates relevant to today's date, current season, and the location if given. Include a mix of local disease alerts, wellness campaigns, and health advisories.
 Return ONLY the raw JSON array starting with [ and ending with ].`;
 
-  const text = await callGemini(prompt);
+  const text = await callGemini(prompt, undefined, undefined, "daily-insight");
   const jsonStart = text.indexOf("[");
   const jsonEnd = text.lastIndexOf("]") + 1;
   const jsonString = text.substring(jsonStart, jsonEnd);

@@ -1,8 +1,6 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
 // @ts-ignore: All icons are used but TypeScript doesn't recognize usage in object properties
 import { 
   Info, 
@@ -994,11 +992,19 @@ export function SymptomForm({ onAnalyze }: SymptomFormProps) {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">Step {step} of {totalSteps}</h2>
-        <div className="flex flex-col items-end">
-          <Progress value={progress} className="w-[200px]" />
-          <span className="text-sm text-muted-foreground mt-1">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b border-slate-200/50 dark:border-slate-800/50 pb-4">
+        <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-slate-300">Step {step} of {totalSteps}</h2>
+        <div className="flex flex-col items-start md:items-end w-full md:w-auto">
+          <div className="relative w-full md:w-[250px] h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
+            <motion.div 
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              style={{ backgroundSize: '200% 100%' }}
+            />
+          </div>
+          <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-2">
             {getStepTitle(step)}
           </span>
         </div>
@@ -1006,7 +1012,7 @@ export function SymptomForm({ onAnalyze }: SymptomFormProps) {
 
       {renderStepContent()}
 
-      <div className="flex justify-between pt-4">
+      <div className="flex justify-between pt-6 mt-8 border-t border-slate-200/50 dark:border-slate-800/50">
         <Button
           variant="outline"
           onClick={handlePreviousStep}

@@ -1,457 +1,258 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { HealthcareFacility } from "@/types/healthcare";
-import { 
-  ArrowLeft,
-  MapPin, 
-  Phone, 
-  Clock, 
-  Star, 
-  Navigation,
-  Hospital,
-  Building,
-  AlertTriangle,
-  RefreshCcw
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+import {
+  MapPin, Star, Phone, CheckCircle,
+  Search, ArrowLeft, SlidersHorizontal, Ambulance, Building,
+  Cross, Pill, TestTube, ChevronRight, Info, Navigation
 } from "lucide-react";
-import { motion } from "framer-motion";
-import { LoadScript } from "@react-google-maps/api";
-import Map from "@/components/Map";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import healthcareData from "@/data/healthcare_data.json";
 
-interface Coordinates {
-  lat: number;
-  lng: number;
+type FacilityType = "All" | "Hospital" | "Pharmacy" | "Clinic";
+type SortBy = "Distance" | "Rating" | "Name";
+
+interface Facility {
+  id: string; 
+  name: string; 
+  type: Exclude<FacilityType, "All">;
+  distance: number; 
+  rating: number; 
+  reviewCount: number;
+  address: string; 
+  phone: string; 
+  isOpen: boolean; 
+  openUntil: string; 
+  verified: boolean;
+  coordinates: { lat: number; lng: number };
+  place_id: string;
 }
 
+const TYPE_STYLES: Record<string, string> = {
+  Hospital: "bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-300 border-red-100 dark:border-red-800",
+  Pharmacy: "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300 border-emerald-100 dark:border-emerald-800",
+  Clinic: "bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300 border-blue-100 dark:border-blue-800",
+};
+
+const TypeIcon = ({ type }: { type: string }) => {
+  if (type === "Hospital") return <Cross className="w-4 h-4" />;
+  if (type === "Pharmacy") return <Pill className="w-4 h-4" />;
+  return <Building className="w-4 h-4" />;
+};
+
 export default function Resources() {
-  const [facilities, setFacilities] = useState<HealthcareFacility[]>([]);
+  const [search, setSearch] = useState("");
+  const [type, setType] = useState<FacilityType>("All");
+  const [minRating, setMinRating] = useState(0);
+  const [openNow, setOpenNow] = useState(false);
+  const [sortBy, setSortBy] = useState<SortBy>("Rating");
   const [loading, setLoading] = useState(true);
-  const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
-  const [selectedFacility, setSelectedFacility] = useState<HealthcareFacility | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const mapsApiKey = (import.meta.env as any).VITE_GOOGLE_MAPS_API_KEY;
+  const [showFilters, setShowFilters] = useState(false);
+  const [facilities, setFacilities] = useState<Facility[]>([]);
 
-  // Get user's current location
   useEffect(() => {
-  if (!navigator.geolocation) {
-    setError("Your browser doesn't support location access. Showing Bhubaneswar as default.");
-    fetchNearbyHospitals({ lat: 20.2961, lng: 85.8245 });
-    return;
-  }
-
-  navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const coords = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude,
-      };
-      setUserLocation(coords);
-      setError(null);
-      fetchNearbyHospitals(coords);
-    },
-    (err) => {
-      console.warn("Geolocation error:", err);
-      switch (err.code) {
-        case err.PERMISSION_DENIED:
-          setError("You denied location permission. Showing hospitals near Bhubaneswar instead.");
-          break;
-        case err.POSITION_UNAVAILABLE:
-          setError("Unable to get your location. Showing default data.");
-          break;
-        case err.TIMEOUT:
-          setError("Location request timed out. Showing default hospitals.");
-          break;
-        default:
-          setError("Could not determine your location. Showing default hospitals.");
-      }
-      fetchNearbyHospitals({ lat: 20.2961, lng: 85.8245 });
-    },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-  );
-}, []);
-
-
-  // Fetch nearby hospitals
-  const fetchNearbyHospitals = async (coords: Coordinates) => {
-    try {
-      setLoading(true);
-      console.log('Fetching hospitals for location:', coords);
-      
-      // Get hospitals near the user's location using our backend proxy
-      const response = await fetch(`/api/google-places?lat=${coords.lat}&lng=${coords.lng}&radius=10000&type=hospital`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      console.log('Received hospital data:', data);
-      
-      // Convert Google Places data to HealthcareFacility format
-      const healthcareFacilities: HealthcareFacility[] = data.results.map((place: any) => {
-        // Use actual distance from API
-        const distance = place.distance ? place.distance.toFixed(1) : (Math.random() * 10).toFixed(1); // Fallback to random if needed
-        
-        // Determine ownership based on name keywords
-        const name = place.name.toLowerCase();
-        let ownership: "public" | "private" | "unknown" = "unknown";
-        if (
-          name.includes("government") ||
-          name.includes("public") ||
-          name.includes("district") ||
-          name.includes("municipal") ||
-          name.includes("community") ||
-          name.includes("uphc") ||
-          name.includes("uchc") ||
-          name.includes("pgimer")
-        ) {
-          ownership = "public";
-        } else if (
-          name.includes("apollo") ||
-          name.includes("fortis") ||
-          name.includes("max") ||
-          name.includes("manipal") ||
-          name.includes("columbia") ||
-          name.includes("narayana") ||
-          name.includes("aiims") ||
-          name.includes("vivekanand") ||
-          name.includes("sum") ||
-          name.includes("assure") ||
-          name.includes("igkc")
-        ) {
-          ownership = "private";
-        }
-
-        // Determine type based on Google Place types
-        let type = "Healthcare Facility";
-        if (place.types && place.types.includes("hospital")) {
-          type = "Hospital";
-        } else if (place.types && place.types.includes("doctor")) {
-          type = "Clinic";
-        } else if (place.types && place.types.includes("pharmacy")) {
-          type = "Pharmacy";
-        }
-
-        // Determine services based on types
-        const services: string[] = [];
-        if (place.types && place.types.includes("hospital")) services.push("Multi-Speciality");
-        if (place.types && place.types.includes("doctor")) services.push("General Medicine");
-        if (place.types && place.types.includes("dentist")) services.push("Dental Care");
-        if (place.types && place.types.includes("pharmacy")) services.push("Pharmacy");
-
-        return {
-          name: place.name,
-          type,
-          ownership,
-          address: place.vicinity || place.formatted_address || "Address not available",
-          distance: `${distance} km`,
-          rating: place.rating || 0,
-          phone: place.formatted_phone_number || place.international_phone_number || "Phone not available",
-          hours: place.opening_hours ? (place.opening_hours.open_now ? "Open 24 hours" : "Closed") : "Hours not available",
-          services: services.length > 0 ? services : ["Multi-Speciality"],
-          coordinates: {
-            lat: place.geometry && place.geometry.location ? place.geometry.location.lat : 0,
-            lng: place.geometry && place.geometry.location ? place.geometry.location.lng : 0
-          },
-          reviews: place.user_ratings_total || 0,
-          emergency: place.types && place.types.includes("hospital"), // Assume hospitals have emergency services
-          website: place.website || ""
-        };
-      });
-      
-      // Sort by distance (closest first)
-      const sortedData = [...healthcareFacilities].sort((a, b) => {
-        const distanceA = parseFloat(a.distance.replace(/[^0-9.]/g, ''));
-        const distanceB = parseFloat(b.distance.replace(/[^0-9.]/g, ''));
-        return distanceA - distanceB;
-      });
-      
-      console.log('Sorted hospital data:', sortedData);
-      setFacilities(sortedData);
-    } catch (err) {
-      console.error('Error fetching hospitals:', err);
-      // Show empty array instead of hardcoded fallback data
-      console.log('No hospital data available');
-      setFacilities([]);
-    } finally {
+    setLoading(true);
+    const timer = setTimeout(() => {
+      setFacilities(healthcareData as any[]);
       setLoading(false);
-    }
-  };
+    }, 600);
+    return () => clearTimeout(timer);
+  }, []);
 
-  // Handle marker click on map
-  const handleMarkerClick = (facility: HealthcareFacility) => {
-    setSelectedFacility(facility);
-  };
-
-  // Get marker color based on facility ownership
-  const getMarkerColor = (ownership: string) => {
-    if (ownership === "public") return "bg-blue-500"; // Government hospitals - blue
-    if (ownership === "private") return "bg-green-500"; // Private hospitals - green
-    return "bg-purple-500"; // Other facilities - purple
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <header className="bg-card shadow-sm border-b">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <Link to="/">
-                  <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted transition-colors">
-                    <ArrowLeft className="w-5 h-5" />
-                  </Button>
-                </Link>
-                <div>
-                  <h1 className="text-2xl font-bold text-foreground flex items-center">
-                    <Navigation className="w-6 h-6 mr-2 text-primary" />
-                    Hospital Locator
-                  </h1>
-                  <p className="text-muted-foreground">Find hospitals near you</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </header>
-        <main className="container mx-auto px-4 py-8">
-          <div className="space-y-4">
-            <Skeleton className="h-12 w-full" />
-            <div className="grid lg:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-32 w-full rounded-xl" />
-                ))}
-              </div>
-              <Skeleton className="h-[600px] rounded-xl" />
-            </div>
-          </div>
-        </main>
-      </div>
-    );
-  }
+  const filtered = facilities
+    .filter(f => (type === "All" || f.type === type) && (minRating === 0 || f.rating >= minRating) && (!openNow || f.isOpen) && (!search || f.name.toLowerCase().includes(search.toLowerCase()) || f.address.toLowerCase().includes(search.toLowerCase())))
+    .sort((a, b) => sortBy === "Distance" ? a.distance - b.distance : sortBy === "Rating" ? b.rating - a.rating : a.name.localeCompare(b.name));
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="bg-card shadow-sm border-b">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link to="/">
-                <Button variant="ghost" size="icon" className="rounded-full hover:bg-muted transition-colors">
-                  <ArrowLeft className="w-5 h-5" />
-                </Button>
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 pb-20">
+      {/* Header Section */}
+      <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-16 sm:h-20 gap-4">
+            <div className="flex items-center gap-4">
+              <Link to="/" className="p-2 rounded-xl text-slate-500 hover:text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all">
+                <ArrowLeft className="w-5 h-5"/>
               </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground flex items-center">
-                  <Navigation className="w-6 h-6 mr-2 text-primary" />
-                  Hospital Locator
-                </h1>
-                <p className="text-muted-foreground">Find hospitals near you</p>
+              <div className="hidden xs:flex flex-col">
+                <h1 className="text-xl font-black tracking-tight leading-none bg-gradient-to-r from-teal-600 to-emerald-600 bg-clip-text text-transparent">HealthHub Directory</h1>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">Verified Medical Resources</p>
               </div>
             </div>
-            <Badge className="bg-primary text-primary-foreground shadow-lg rounded-full">
-              <MapPin className="w-3 h-3 mr-1" />
-              Location-Based
-            </Badge>
+
+            <div className="flex-1 max-w-lg relative group">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-teal-500 transition-colors"/>
+              <input 
+                value={search} 
+                onChange={e=>setSearch(e.target.value)} 
+                placeholder="Find hospitals, clinics and pharmacies..." 
+                className="w-full pl-11 pr-4 py-2.5 text-sm bg-slate-100 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-teal-500 transition-all"
+              />
+            </div>
+
+            <button 
+              onClick={()=>setShowFilters(!showFilters)} 
+              className={cn(
+                "hidden sm:flex items-center gap-2 px-4 py-2.5 rounded-2xl border text-xs font-black transition-all",
+                showFilters ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 border-slate-900" : "bg-white dark:bg-slate-800 text-slate-600 border-slate-200 dark:border-slate-700 hover:bg-slate-50"
+              )}
+            >
+              <SlidersHorizontal className="w-4 h-4"/>
+              FILTERS
+            </button>
           </div>
         </div>
-      </header>
 
-      <main className="container mx-auto px-4 py-8">
-        {error && (
-          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-start">
-            <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-yellow-800 font-medium">Notice</p>
-              <p className="text-yellow-700 text-sm">{error}</p>
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div initial={{height:0,opacity:0}} animate={{height:"auto",opacity:1}} exit={{height:0,opacity:0}} className="overflow-hidden border-t border-slate-100 dark:border-slate-800">
+              <div className="max-w-7xl mx-auto px-6 py-5 flex flex-wrap gap-8 items-start">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Facility Type</label>
+                  <div className="flex gap-2 flex-wrap">
+                    {["All","Hospital","Pharmacy","Clinic"].map(t=>(
+                      <button key={t} onClick={()=>{setType(t as any);}} className={cn("px-4 py-2 rounded-xl text-xs font-bold border transition-all",type===t?"bg-teal-600 text-white border-teal-600 shadow-md":"bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 hover:border-teal-400")}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Minimum Rating</label>
+                  <div className="flex gap-1.5">{[0,3,4,4.5].map(r=><button key={r} onClick={()=>setMinRating(r)} className={cn("px-4 py-2 rounded-xl border text-[11px] font-black transition-all", minRating===r?"bg-amber-500 text-white border-amber-500 shadow-sm":"bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700")}>{r===0?"ANY":`${r}★+`}</button>)}</div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Current Status</label>
+                  <button onClick={()=>setOpenNow(!openNow)} className={cn("flex items-center gap-2.5 px-4 py-2 rounded-xl border text-xs font-bold transition-all", openNow?"bg-emerald-500 text-white border-emerald-500 shadow-sm":"bg-white dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700")}>
+                    <div className={cn("w-2 h-2 rounded-full", openNow?"bg-white animate-pulse":"bg-slate-300")}/>
+                    OPEN NOW
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Facilities Directory</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{loading ? "Updating results..." : `${filtered.length} trusted facilities in Bhubaneswar`}</span>
+              <Badge variant="outline" className="h-5 text-[9px] bg-teal-50 text-teal-600 border-teal-100 font-black">EXCEL DATA</Badge>
             </div>
           </div>
-        )}
-
-        {userLocation && (
-          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-blue-800 font-medium flex items-center">
-              <MapPin className="w-4 h-4 mr-2" />
-              Your location detected successfully
-            </p>
+          <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 w-fit self-end sm:self-auto">
+            {(["Distance","Rating"] as SortBy[]).map(s=><button key={s} onClick={()=>setSortBy(s)} className={cn("px-4 py-1.5 rounded-lg text-[10px] font-black transition-all",sortBy===s?"bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md":"text-slate-400 hover:text-slate-600")}>{s.toUpperCase()}</button>)}
           </div>
-        )}
-
-        <div className="mb-6">
-          <h2 className="text-xl font-bold mb-4">Nearest Hospitals</h2>
-          <p className="text-muted-foreground mb-4">
-            Showing hospitals near your location, sorted by distance (closest first). Click on any hospital to see it on the map or get directions.
-          </p>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          <div className="space-y-4">
-            {facilities.map((facility, index) => (
-              <motion.div
-                key={facility.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1,2,3,4,5,6].map(i=>(
+              <div key={i} className="h-64 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 animate-pulse p-6">
+                <div className="flex gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800"/>
+                  <div className="space-y-3 flex-1 pt-2">
+                    <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded w-3/4"/>
+                    <div className="h-3 bg-slate-50 dark:bg-slate-800/50 rounded w-1/2"/>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="h-3 bg-slate-50 dark:bg-slate-800/50 rounded w-full"/>
+                  <div className="h-3 bg-slate-50 dark:bg-slate-800/50 rounded w-2/3"/>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-32 bg-white dark:bg-slate-900/50 rounded-[40px] border-2 border-dashed border-slate-200 dark:border-slate-800">
+            <div className="w-20 h-20 rounded-3xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-6"><Search className="w-10 h-10 text-slate-300"/></div>
+            <h3 className="text-xl font-black text-slate-800 dark:text-white">No matches found</h3>
+            <p className="text-sm text-slate-500 mt-2 max-w-xs text-center">We couldn't find any facilities matching your current filters. Try resetting them.</p>
+            <Button variant="outline" className="mt-8 rounded-2xl font-black text-xs h-12 px-8 border-2" onClick={()=>{setType("All"); setMinRating(0); setSearch("");}}>RESET ALL FILTERS</Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 xl:gap-8">
+            {filtered.map((f, i) => (
+              <motion.div 
+                key={f.id} 
+                initial={{ opacity: 0, y: 20 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                transition={{ delay: i * 0.05 }}
+                className="group relative flex flex-col bg-white dark:bg-slate-900 rounded-[32px] border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-2xl hover:shadow-teal-500/10 hover:-translate-y-1.5 transition-all duration-300 overflow-hidden"
               >
-                <Card 
-                  className="hover:shadow-md transition-shadow cursor-pointer"
-                  onClick={() => handleMarkerClick(facility)}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="flex items-center gap-2">
-                          {facility.ownership === "public" ? (
-                            <Building className="w-5 h-5 text-blue-500" />
-                          ) : facility.ownership === "private" ? (
-                            <Hospital className="w-5 h-5 text-green-500" />
-                          ) : (
-                            <Hospital className="w-5 h-5 text-purple-500" />
-                          )}
-                          {facility.name}
-                          {index === 0 && (
-                            <Badge variant="default" className="ml-2 bg-yellow-500 text-yellow-900">
-                              Closest
-                            </Badge>
-                          )}
-                        </CardTitle>
-                        <p className="text-sm text-muted-foreground mt-1">{facility.address}</p>
+                {/* Visual Accent */}
+                <div className="h-2 w-full absolute top-0 left-0" style={{ background: f.isOpen ? `linear-gradient(90deg, #10b981, #34d399)` : `#94a3b8` }} />
+                
+                <div className="p-6 sm:p-8 flex flex-col h-full">
+                  <div className="flex items-start justify-between gap-4 mb-6">
+                    <div className="w-16 h-16 rounded-[22px] flex items-center justify-center flex-shrink-0 shadow-inner text-white transition-transform group-hover:scale-110 group-hover:rotate-3" style={{ background: f.isOpen ? `linear-gradient(135deg, #0d9488, #14b8a6)` : `#94a3b8` }}>
+                      <TypeIcon type={f.type}/>
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className={cn("px-3 py-1 rounded-full text-[10px] font-black border tracking-wider", f.isOpen ? "bg-emerald-500 text-white border-emerald-500" : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700")}>
+                        {f.isOpen ? "OPEN 24/7" : "CLOSED NOW"}
                       </div>
-                      <Badge 
-                        className={`${getMarkerColor(facility.ownership)} text-white`}
+                      <div className="flex items-center gap-1 text-amber-500 bg-amber-50 dark:bg-amber-900/10 px-2.5 py-1 rounded-lg border border-amber-100 dark:border-amber-900/50">
+                        <Star className="w-3.5 h-3.5 fill-amber-500"/>
+                        <span className="text-xs font-black">{f.rating || "NEW"}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-6 flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                       <h3 className="text-lg font-black text-slate-800 dark:text-white leading-tight tracking-tight group-hover:text-teal-600 transition-colors line-clamp-2">{f.name}</h3>
+                       {f.verified && <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0"/>}
+                    </div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className={cn("px-2.5 py-1 rounded-lg text-[10px] font-black border", TYPE_STYLES[f.type])}>{f.type.toUpperCase()}</span>
+                      <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1"><MapPin className="w-3.5 h-3.5"/>Bhubaneswar</span>
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed line-clamp-2">{f.address}</p>
+                  </div>
+
+                  <div className="space-y-3 pt-6 border-t border-slate-50 dark:border-slate-800/50">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400 font-bold uppercase tracking-widest text-[9px]">Reviews</span>
+                      <span className="text-slate-700 dark:text-slate-200 font-extrabold">{f.reviewCount.toLocaleString()} certified verifications</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <a href={`tel:${f.phone}`} className="flex-1 flex items-center justify-center gap-2 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 text-xs font-black text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95">
+                        <Phone className="w-4 h-4"/>
+                        CALL
+                      </a>
+                      <a 
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(f.name + " " + f.address)}`} 
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="flex-1 flex items-center justify-center gap-2 h-12 rounded-2xl bg-teal-600 text-white text-xs font-black hover:bg-teal-700 shadow-lg shadow-teal-500/20 transition-all active:scale-95"
                       >
-                        {facility.ownership === "public" 
-                          ? "Government" 
-                          : facility.ownership === "private" 
-                          ? "Private" 
-                          : "Other"}
-                      </Badge>
+                        <Navigation className="w-4 h-4"/>
+                        MAPS
+                      </a>
                     </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="flex items-center">
-                        <MapPin className="w-4 h-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{facility.distance}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Phone className="w-4 h-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{facility.phone}</span>
-                      </div>
-                      <div className="flex items-center">
-                        <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
-                        <span className="text-sm">{facility.hours}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center mt-3">
-                      <div className="flex items-center mr-4">
-                        <Star className="w-4 h-4 text-yellow-500 mr-1" />
-                        <span className="text-sm font-medium">{facility.rating}</span>
-                        <span className="text-muted-foreground text-xs ml-1">
-                          ({facility.reviews?.toLocaleString() || 0} reviews)
-                        </span>
-                      </div>
-                      {facility.emergency && (
-                        <Badge variant="destructive" className="text-xs">
-                          Emergency Care
-                        </Badge>
-                      )}
-                    </div>
-                    
-                    <div className="mt-3">
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Services: {facility.services.slice(0, 3).join(", ")}
-                        {facility.services.length > 3 ? "..." : ""}
-                      </p>
-                    </div>
-                    
-                    <div className="flex gap-2 mt-4">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          window.open(
-                            `https://www.google.com/maps/dir/?api=1&destination=${facility.coordinates.lat},${facility.coordinates.lng}`,
-                            '_blank'
-                          );
-                        }}
-                      >
-                        <Navigation className="w-4 h-4 mr-2" />
-                        Get Directions
-                      </Button>
-                      {facility.website && facility.website !== "" && (
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.open(`https://${facility.website}`, '_blank');
-                          }}
-                        >
-                          Visit Website
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </div>
-
-          <div className="h-[600px] rounded-2xl overflow-hidden shadow-lg">
-            {mapsApiKey ? (
-              <LoadScript
-                googleMapsApiKey={mapsApiKey}
-                libraries={["places"]}
-                loadingElement={<div className="h-full bg-gray-100 animate-pulse" />}
-              >
-                <Map
-                  apiKey={mapsApiKey}
-                  facilities={facilities}
-                  center={userLocation || { lat: 20.2961, lng: 85.8245 }}
-                  onMarkerClick={handleMarkerClick}
-                  selectedFacility={selectedFacility}
-                  onInfoWindowClose={() => setSelectedFacility(null)}
-                  userLocation={userLocation}
-                />
-                
-              </LoadScript>
-            ) : (
-              <div className="h-full flex items-center justify-center bg-muted">
-                <div className="text-center">
-                  <p className="text-lg font-semibold text-foreground mb-2">Google Maps API key not configured</p>
-                  <p className="text-sm text-muted-foreground">Set VITE_GOOGLE_MAPS_API_KEY in your .env file</p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {facilities.length === 0 && !loading && (
-          <div className="text-center py-12">
-            <Hospital className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No hospitals found</h3>
-            <p className="text-muted-foreground mb-4">
-              We couldn't find any hospitals in your area. This could be due to:
-            </p>
-            <ul className="text-muted-foreground text-sm mb-4 text-left max-w-md mx-auto">
-              <li className="mb-2">• Network connectivity issues</li>
-              <li className="mb-2">• Google Maps API configuration problems</li>
-              <li className="mb-2">• No hospitals registered in Google Places near your location</li>
-              <li>• Location services disabled in your browser</li>
-            </ul>
-            <Button onClick={() => fetchNearbyHospitals({ lat: 20.2961, lng: 85.8245 })}>
-              <RefreshCcw className="w-4 h-4 mr-2" />
-              Retry
-            </Button>
-          </div>
         )}
-      </main>
+      </div>
+
+      {/* Emergency Global CTA */}
+      <a href="tel:112" className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90vw] max-w-xl h-20 bg-red-600 hover:bg-red-700 text-white rounded-[32px] shadow-2xl shadow-red-500/40 flex items-center gap-4 px-6 transition-all group active:scale-95 z-50">
+        <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center group-hover:rotate-12 transition-transform"><Ambulance className="w-6 h-6"/></div>
+        <div className="flex-1">
+          <p className="text-sm font-black tracking-tight leading-none uppercase">Emergency Support</p>
+          <p className="text-[10px] text-red-100 font-bold opacity-80 mt-1 uppercase tracking-wider">TAP TO REQUEST AMBULANCE · 112</p>
+        </div>
+        <ChevronRight className="w-6 h-6 opacity-40 group-hover:translate-x-2 transition-transform"/>
+      </a>
     </div>
   );
 }

@@ -326,6 +326,22 @@
     background: hsl(var(--muted-foreground) / 0.5);
   }
 
+  /* Custom HealAI Scrollbar for Chat */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.1);
+    border-radius: 10px;
+    transition: all 0.3s;
+  }
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.3);
+  }
+
   /* Selection */
   ::selection {
     background: rgba(13, 148, 136, 0.2);

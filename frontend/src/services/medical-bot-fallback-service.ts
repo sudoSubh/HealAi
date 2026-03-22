@@ -7,7 +7,7 @@ const getAvailableKeys = () => ["proxy"];
 const getRandomGeminiClient = () => ({});
 
 // Function to generate content using OpenRouter (fallback)
-export async function generateWithOpenRouter(_prompt: string, _systemContext?: string) {
+export async function generateWithOpenRouter(_prompt: string, _systemContext?: string): Promise<string> {
   try {
     // Attempting to generate content with OpenRouter
     
@@ -21,7 +21,7 @@ export async function generateWithOpenRouter(_prompt: string, _systemContext?: s
 }
 
 // Function to generate content using Gemini (primary)
-export async function generateWithGemini(prompt: string, systemContext?: string) {
+export async function generateWithGemini(prompt: string, systemContext?: string): Promise<string> {
   try {
     // Generating content with model
     
@@ -35,7 +35,7 @@ export async function generateWithGemini(prompt: string, systemContext?: string)
     const client = getRandomGeminiClient();
     void client; // shim only
 
-    const content = await callGemini(fullPrompt);
+    const content = await callGemini(fullPrompt, undefined, undefined, "medical-bot");
 
     if (content) {
       // Successfully generated content
@@ -50,7 +50,7 @@ export async function generateWithGemini(prompt: string, systemContext?: string)
 }
 
 // Function to generate content with image using Gemini
-export async function generateWithGeminiWithImage(imageData: string, prompt: string, systemContext?: string) {
+export async function generateWithGeminiWithImage(imageData: string, prompt: string, systemContext?: string): Promise<string> {
   try {
     // Generating content with model and image
     
@@ -82,7 +82,7 @@ export async function generateWithGeminiWithImage(imageData: string, prompt: str
 }
 
 // Main function that uses Gemini as the primary provider
-export async function generateMedicalResponse(prompt: string, systemContext?: string) {
+export async function generateMedicalResponse(prompt: string, systemContext?: string): Promise<string> {
   try {
     // Try OpenRouter first (fallback mechanism)
     try {
@@ -99,7 +99,7 @@ export async function generateMedicalResponse(prompt: string, systemContext?: st
 }
 
 // Main function that uses Gemini with image as the primary provider
-export async function generateMedicalResponseWithImage(imageData: string, prompt: string, systemContext?: string) {
+export async function generateMedicalResponseWithImage(imageData: string, prompt: string, systemContext?: string): Promise<string> {
   try {
     // Use Gemini with image as the primary provider
     return await generateWithGeminiWithImage(imageData, prompt, systemContext);
@@ -108,5 +108,3 @@ export async function generateMedicalResponseWithImage(imageData: string, prompt
     throw new Error(`Failed to generate response with model and image: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
-
-export { googleGenerativeAI };

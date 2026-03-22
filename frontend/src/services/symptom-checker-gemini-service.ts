@@ -207,7 +207,7 @@ export async function analyzeSymptomsWithGemini(data: AnalysisData): Promise<Ana
       .replace("{familyHistory}", data.familyHistory.join(", ") || "None reported");
 
     // Route through the backend proxy
-    const text = await callGemini(prompt);
+    const text = await callGemini(prompt, undefined, undefined, "symptom-checker");
 
     if (text) {
       try {

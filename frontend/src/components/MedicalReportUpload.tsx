@@ -6,6 +6,7 @@ import { Upload, FileText, ImageIcon, Loader2, CheckCircle2, Trash2, Microscope 
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { callGemini } from "@/services/gemini";
+import ReactMarkdown from "react-markdown";
 
 export interface ReportFile {
   id: string;
@@ -84,7 +85,7 @@ Provide a structured analysis with:
 
 Be precise, use medical terminology but also provide plain-language explanations.`;
 
-      const result = await callGemini(prompt, file.base64, file.mimeType);
+      const result = await callGemini(prompt, file.base64, file.mimeType, "report-analyzer");
       setFiles((prev) =>
         prev.map((f) =>
           f.id === fileId ? { ...f, status: "analyzed", analysisResult: result } : f
@@ -232,8 +233,10 @@ Be precise, use medical terminology but also provide plain-language explanations
                   >
                     <div className="rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-700/30 p-4">
                       <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wide">AI Analysis</p>
-                      <div className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                        {file.analysisResult}
+                      <div className="text-sm text-foreground leading-relaxed">
+                        <ReactMarkdown className="prose dark:prose-invert prose-sm max-w-none">
+                          {file.analysisResult}
+                        </ReactMarkdown>
                       </div>
                     </div>
                   </motion.div>

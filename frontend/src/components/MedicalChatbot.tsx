@@ -8,7 +8,8 @@ import { useToast } from "@/components/ui/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import ReactMarkdown from 'react-markdown';
-import { generateMedicalResponse, generateMedicalResponseWithImage } from "@/services/medical-bot-fallback-service"; // Use fallback service
+import { generateMedicalResponse, generateMedicalResponseWithImage } from "@/services/medical-bot-fallback-service"; 
+import { cn } from "@/lib/utils";
 
 // Import franc-min at the top level instead of dynamically
 import { franc } from 'franc-min';
@@ -235,12 +236,14 @@ const TypingIndicator = () => (
 
 interface MedicalChatbotProps {
   initialQuestion?: string | null;
+  hideShell?: boolean;
 }
 
-export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) {
+export function MedicalChatbot({ initialQuestion = null, hideShell = false }: MedicalChatbotProps) {
   const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
   const [input, setInput] = useState("");
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -255,23 +258,19 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [speakingMessageId, setSpeakingMessageId] = useState<string | null>(null);
 
+  // Keep track if we've already auto-sent the question
+
   // Set initial question if provided
   useEffect(() => {
     if (initialQuestion) {
-      setInput(initialQuestion);
-    }
-  }, [initialQuestion]);
-
-  // Auto-send initial question if provided
-  useEffect(() => {
-    if (initialQuestion && input === initialQuestion) {
-      // Small delay to ensure component is fully rendered
+      // Auto-send after a short delay
       const timer = setTimeout(() => {
-        handleSendMessage();
-      }, 300);
+        handleSendMessage(initialQuestion);
+      }, 500);
+      
       return () => clearTimeout(timer);
     }
-  }, [input, initialQuestion]);
+  }, [initialQuestion]);
 
   useEffect(() => {
     // Load chat history from localStorage on component mount
@@ -301,16 +300,23 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
     }
   }, [messages]);
 
-  const simulateTyping = async (text: string) => {
-    const minDelay = 500;
-    const maxDelay = 1500;
+  const simulateTyping = async (text: string): Promise<string> => {
+    // Scroll during typing for better UX
+    if (scrollRef.current) {
+       scrollRef.current.scrollTo({
+         top: scrollRef.current.scrollHeight,
+         behavior: 'smooth'
+       });
+    }
+    const minDelay = 100;
+    const maxDelay = 300;
     const delay = Math.random() * (maxDelay - minDelay) + minDelay;
     await new Promise(resolve => setTimeout(resolve, delay));
     return text;
   };
 
   const handleFeedback = (messageIndex: number, feedback: 'positive' | 'negative') => {
-    setMessages(prev => prev.map((msg, idx) => 
+    setMessages(prev => prev.map((msg, idx) =>
       idx === messageIndex ? { ...msg, feedback } : msg
     ));
     toast({
@@ -343,14 +349,14 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
 
   const handleImageAnalysis = async (imageData: string) => {
     setIsThinking(true);
-    
+
     try {
       // Create a prompt for image analysis
       const prompt = "You are a medical professional. Please analyze this medical image and provide insights about: 1) What it shows 2) Any concerns 3) Recommendations. Include medical disclaimers.";
-      
+
       // Use Gemini with image for analysis
       const response = await generateMedicalResponseWithImage(imageData, prompt, MEDICAL_CONTEXT);
-      
+
       const botMessage: Message = {
         id: Date.now().toString(), // Generate unique ID for the message
         type: 'bot',
@@ -359,7 +365,7 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
       };
 
       setMessages(prev => [...prev, botMessage]);
-      
+
       // Speak the response automatically after it's received
       setTimeout(() => {
         speakMessage(response, botMessage.id!); // Pass the message ID
@@ -403,10 +409,10 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
 
     try {
       const reader = new FileReader();
-      
+
       reader.onloadend = async () => {
         const base64Image = reader.result as string;
-        
+
         // Add user message with image
         const userMessage: Message = {
           id: Date.now().toString(), // Generate unique ID for the message
@@ -417,7 +423,7 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
         };
 
         setMessages(prev => [...prev, userMessage]);
-        
+
         // Clear the file input
         if (fileInputRef.current) {
           fileInputRef.current.value = '';
@@ -461,13 +467,12 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
         if (!SpeechRecognition) {
           throw new Error('Speech recognition not supported in this browser');
         }
-        
+
         const recognition = new SpeechRecognition();
-        
-        // Set language based on user input or default to English
-        const lastUserMessage = messages.filter(msg => msg.type === 'user').pop();
-        const detectedLanguageCode = lastUserMessage?.language || 'en';
-        
+
+        // Set language based on user selection or auto-detect
+        const detectedLanguageCode = selectedLanguage || 'en';
+
         // Map language codes to speech recognition language codes
         const speechLangMap: Record<string, string> = {
           'en': 'en-US',
@@ -506,7 +511,7 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
           'fa': 'fa-IR',
           'sw': 'sw-KE',
         };
-        
+
         recognition.lang = speechLangMap[detectedLanguageCode] || 'en-US';
         recognition.continuous = false;
         recognition.interimResults = false;
@@ -530,18 +535,18 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
         };
 
         recognition.start();
-        
+
         stream.getTracks().forEach(track => track.stop());
       };
 
       mediaRecorder.current.start();
       setIsRecording(true);
-      
+
       toast({
         title: "Recording started",
         description: "Speak clearly into your microphone.",
       });
-      
+
     } catch (error) {
       console.error('Error accessing microphone:', error);
       toast({
@@ -580,24 +585,25 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
   };
 
   // Enhanced message handling with multilingual support
-  const handleSendMessage = async () => {
-    if (!input.trim()) return;
-    
+  const handleSendMessage = async (overrideMessage?: string) => {
+    const textToSend = overrideMessage || input;
+    if (!textToSend.trim()) return;
+
     setIsThinking(true);
     setIsTyping(true);
 
     try {
       // Detect language with confidence checking
-      const detectedLanguageCode = franc(input);
+      const detectedLanguageCode = franc(textToSend);
       console.log('Detected language code:', detectedLanguageCode);
-      
-      // Default to English if language detection fails or is unreliable
-      const languageInfo = LANGUAGE_MAP[detectedLanguageCode] || { name: 'English', code: 'en' };
-      
+
+      // Priority: User selector > Detected language
+      const languageInfo = LANGUAGE_MAP[selectedLanguage] || LANGUAGE_MAP[detectedLanguageCode] || { name: 'English', code: 'en' };
+
       const userMessage: Message = {
         id: Date.now().toString(), // Generate unique ID for the message
         type: 'user',
-        content: input,
+        content: textToSend,
         timestamp: new Date(),
         language: languageInfo.code
       };
@@ -621,12 +627,26 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
       If you're not confident in your ability to provide accurate medical information in the user's language, 
       politely inform them and offer to continue in English.`;
 
-      const response = await generateMedicalResponse(input, languageSpecificContext);
+      let response = "";
+      try {
+        response = await generateMedicalResponse(textToSend, languageSpecificContext);
+      } catch (error: any) {
+        console.error("[HealAI] Bot error:", error);
+        
+        // Handle Gemini 429 Error (Quota Exceeded)
+        const isQuotaError = error?.message?.includes("429") || error?.status === 429 || error?.message?.toLowerCase().includes("quota");
+        
+        if (isQuotaError) {
+          response = "⚠️ **API Quota Exceeded (429)**: You have reached the daily limit of 20 requests for the Gemini 3 Flash model on this API key. Please try again later or add/change the API key in settings.";
+        } else {
+          response = "I'm sorry, but I encountered an error while processing your request. Please try again or check your internet connection.";
+        }
+      }
 
-      const botResponse = await simulateTyping(response || "I couldn't process that request. Please try again.");
+      const botResponse = (await simulateTyping(response || "I couldn't process that request. Please try again.")) as string;
 
       const botMessage: Message = {
-        id: Date.now().toString(), // Generate unique ID for the message
+        id: Date.now().toString(),
         type: 'bot',
         content: botResponse,
         timestamp: new Date(),
@@ -634,7 +654,7 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
       };
 
       setMessages(prev => [...prev, botMessage]);
-      
+
       // Speak the response automatically after it's received
       setTimeout(() => {
         speakMessage(botResponse, botMessage.id!); // Pass the message ID
@@ -672,7 +692,7 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
     if ('speechSynthesis' in window) {
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
-      
+
       // Remove markdown tags and clean the text for speaking
       const cleanText = text
         .replace(/#{1,6}\s?/g, '') // Remove headers
@@ -686,45 +706,45 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
         .replace(/\*\s/g, '') // Remove bullet points
         .replace(/\d+\.\s/g, '') // Remove numbered lists
         .trim();
-      
+
       const utterance = new SpeechSynthesisUtterance(cleanText);
-      
+
       // Set language based on message language
-      const message = messages.find(msg => 
+      const message = messages.find(msg =>
         msg.type === 'bot' && msg.id === messageId
       );
-      
+
       if (message?.language) {
         utterance.lang = message.language;
       } else {
         utterance.lang = 'en-US';
       }
-      
+
       // Enhanced voice settings for better conversational tone
       utterance.rate = 0.9; // Slightly slower for better comprehension
       utterance.pitch = 1.1; // Slightly higher pitch for more natural sound
       utterance.volume = 1.0;
-      
+
       utterance.onstart = () => {
         setSpeakingMessageId(messageId);
         // Update message to show it's speaking
-        setMessages(prev => prev.map((msg) => 
+        setMessages(prev => prev.map((msg) =>
           msg.id === messageId ? { ...msg, isSpeaking: true } : msg
         ));
       };
-      
+
       utterance.onend = () => {
         setSpeakingMessageId(null);
         // Update message to show it's finished speaking
-        setMessages(prev => prev.map((msg) => 
+        setMessages(prev => prev.map((msg) =>
           msg.id === messageId ? { ...msg, isSpeaking: false } : msg
         ));
       };
-      
+
       utterance.onerror = (event) => {
         console.error('Speech synthesis error:', event);
         setSpeakingMessageId(null);
-        setMessages(prev => prev.map((msg) => 
+        setMessages(prev => prev.map((msg) =>
           msg.id === messageId ? { ...msg, isSpeaking: false } : msg
         ));
         toast({
@@ -733,7 +753,7 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
           description: "Failed to speak the message. Please try again.",
         });
       };
-      
+
       window.speechSynthesis.speak(utterance);
     } else {
       toast({
@@ -750,7 +770,7 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
       window.speechSynthesis.cancel();
       setSpeakingMessageId(null);
       // Reset all speaking states
-      setMessages(prev => prev.map(msg => 
+      setMessages(prev => prev.map(msg =>
         msg.isSpeaking ? { ...msg, isSpeaking: false } : msg
       ));
     }
@@ -785,8 +805,10 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
 
 
   return (
-    <div className="relative">
-      <div className="w-full max-w-4xl mx-auto shadow-xl bg-gradient-to-b from-white to-emerald-50/30 border border-emerald-100 rounded-2xl overflow-hidden">
+    <div className={cn("relative", hideShell ? "h-full flex flex-col" : "w-full")}>
+      <div className={cn(
+        hideShell ? "flex flex-col h-full overflow-hidden" : "w-full max-w-4xl mx-auto shadow-xl bg-gradient-to-b from-white to-emerald-50/30 border border-emerald-100 rounded-2xl overflow-hidden flex flex-col max-h-[90vh] md:max-h-[85vh]"
+      )}>
         {/* Header Section */}
         <div className="p-5 border-b border-emerald-100 bg-gradient-to-r from-emerald-50/50 to-white">
           <div className="flex items-center justify-between">
@@ -836,7 +858,7 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
                         >
                           <div className="flex justify-between items-center">
                             <span className="text-sm font-medium">
-                              {chat.date.toLocaleDateString()} at {chat.date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              {chat.date.toLocaleDateString()} at {chat.date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                             <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
                               {chat.messages.length} messages
@@ -865,23 +887,29 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
         </div>
 
         {/* Warning Banner */}
-        <Alert variant="destructive" className="mx-5 mt-5 border-l-4 border-red-500 rounded-xl bg-red-50">
-          <div className="flex items-start">
-            <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
-            <div className="ml-3">
-              <AlertDescription className="text-sm">
-                <span className="font-semibold">Medical Disclaimer:</span> This AI assistant provides general information for awareness and educational purposes only. 
-                Always consult healthcare professionals for medical advice. In case of emergency, call your local emergency number immediately.
-              </AlertDescription>
+        {!hideShell && (
+          <Alert variant="destructive" className="mx-5 mt-5 border-l-4 border-red-500 rounded-xl bg-red-50">
+            <div className="flex items-start">
+              <AlertTriangle className="h-5 w-5 mt-0.5 flex-shrink-0" />
+              <div className="ml-3">
+                <AlertDescription className="text-sm">
+                  <span className="font-semibold">Medical Disclaimer:</span> This AI assistant provides general information for awareness and educational purposes only.
+                  Always consult healthcare professionals for medical advice. In case of emergency, call your local emergency number immediately.
+                </AlertDescription>
+              </div>
             </div>
-          </div>
-        </Alert>
+          </Alert>
+        )}
 
         {/* Chat Area */}
-        <ScrollArea 
-          className="h-[500px] p-5 md:h-[600px] bg-gradient-to-b from-white to-emerald-50/30" 
+        <div
           ref={scrollRef}
           onScroll={handleScroll}
+          className={cn(
+            "overflow-y-auto w-full transition-all duration-300 scroll-smooth custom-scrollbar flex-1",
+            hideShell ? "" : "p-4 md:p-6"
+          )}
+          style={hideShell ? { background: 'transparent' } : {}}
         >
           <div className="space-y-6">
             <AnimatePresence>
@@ -900,16 +928,15 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
                   )}
                   <div className="flex flex-col max-w-[85%]">
                     <div
-                      className={`rounded-2xl p-4 shadow-sm ${
-                        message.type === 'user'
+                      className={`rounded-2xl p-4 shadow-sm ${message.type === 'user'
                           ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-tr-none shadow-md'
                           : 'bg-white border border-emerald-100 rounded-tl-none shadow-[0_4px_12px_rgba(0,0,0,0.05)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-shadow'
-                      }`}
+                        }`}
                     >
                       {message.image && (
                         <div className="mb-3 relative">
-                          <img 
-                            src={message.image} 
+                          <img
+                            src={message.image}
                             alt="Uploaded medical image"
                             className="max-w-[300px] rounded-xl shadow-md"
                           />
@@ -923,14 +950,14 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
                           )}
                         </div>
                       )}
-                      <ReactMarkdown 
+                      <ReactMarkdown
                         className="text-sm prose prose-sm max-w-none dark:prose-invert prose-headings:mb-3 prose-p:mb-3 prose-ul:mb-3"
                         components={{
-                          h2: ({children}) => <h2 className="text-lg font-bold mt-4 mb-3 text-foreground border-b border-gray-200 pb-2">{children}</h2>,
-                          strong: ({children}) => <strong className="font-semibold">{children}</strong>,
-                          ul: ({children}) => <ul className="list-disc pl-5 space-y-1">{children}</ul>,
-                          li: ({children}) => <li className="text-sm">{children}</li>,
-                          blockquote: ({children}) => (
+                          h2: ({ children }) => <h2 className="text-lg font-bold mt-4 mb-3 text-foreground border-b border-gray-200 pb-2">{children}</h2>,
+                          strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                          ul: ({ children }) => <ul className="list-disc pl-5 space-y-1">{children}</ul>,
+                          li: ({ children }) => <li className="text-sm">{children}</li>,
+                          blockquote: ({ children }) => (
                             <blockquote className="border-l-4 border-emerald-500 pl-4 my-3 italic bg-emerald-50/50 py-2 rounded-r-lg">
                               {children}
                             </blockquote>
@@ -941,7 +968,7 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
                       </ReactMarkdown>
                       <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100/50">
                         <span className="text-xs opacity-80">
-                          {message.timestamp.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           {message.language && (
                             <span className="ml-2 bg-emerald-100 px-2 py-0.5 rounded-full text-xs font-medium text-emerald-800">
                               {(() => {
@@ -1035,78 +1062,91 @@ export function MedicalChatbot({ initialQuestion = null }: MedicalChatbotProps) 
                 </div>
               </div>
             )}
+            {/* Invisible anchor for automatic scrolling if needed */}
+            <div className="h-4" />
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Input Area */}
-        <div className="p-5 border-t border-emerald-100 bg-gradient-to-r from-white to-emerald-50/30 backdrop-blur-sm rounded-b-2xl">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-            className="flex gap-3 items-end"
-          >
-            <div className="flex-1 space-y-2">
-              <div className="relative">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Type your health question or describe your symptoms..."
-                  className="min-h-[56px] text-base pl-4 pr-12 rounded-2xl border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-sm"
-                  disabled={isThinking}
-                />
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-1">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                  />
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={handleImageButtonClick}
-                    disabled={isThinking}
-                    className="hover:bg-emerald-100 rounded-full h-8 w-8"
-                  >
-                    <ImageIcon className="h-4 w-4 text-emerald-600" />
-                  </Button>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
-                    className={`hover:bg-emerald-100 rounded-full h-8 w-8 ${isRecording ? 'animate-pulse bg-red-100 text-red-600' : 'text-emerald-600'}`}
-                  >
-                    <Mic className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-              {isThinking && (
-                <div className="text-xs text-emerald-600 animate-pulse flex items-center gap-1">
-                  <div className="w-2 h-2 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
-                  Generating response...
-                </div>
-              )}
-
-            </div>
-            <Button 
-              type="submit" 
-              size="icon"
-              disabled={isThinking || !input.trim()}
-              className="bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 h-12 w-12 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+        {!hideShell && (
+          <div className="p-3 md:p-4 border-t border-emerald-100 bg-gradient-to-r from-white to-emerald-50/30 backdrop-blur-sm rounded-b-2xl">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="flex gap-3 items-end"
             >
-              <Send className="h-5 w-5" />
-            </Button>
-          </form>
-          <p className="text-xs text-center text-gray-500 mt-3">
-            Powered by advanced AI technology • Information & awareness only
-          </p>
+              <div className="flex-1 space-y-2">
+                <div className="relative">
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Type your health question or describe your symptoms..."
+                    className="min-h-[56px] text-base pl-4 pr-12 rounded-2xl border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 shadow-sm"
+                    disabled={isThinking}
+                  />
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex gap-1">
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={handleImageButtonClick}
+                      disabled={isThinking}
+                      className="hover:bg-emerald-100 rounded-full h-8 w-8"
+                    >
+                      <ImageIcon className="h-4 w-4 text-emerald-600" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={isRecording ? stopVoiceRecording : startVoiceRecording}
+                      className={`hover:bg-emerald-100 rounded-full h-8 w-8 ${isRecording ? 'animate-pulse bg-red-100 text-red-600' : 'text-emerald-600'}`}
+                    >
+                      <Mic className="h-4 w-4" />
+                    </Button>
+                    <select
+                      value={selectedLanguage}
+                      onChange={(e) => setSelectedLanguage(e.target.value)}
+                      className="bg-transparent text-[10px] text-emerald-600 border-none outline-none cursor-pointer hover:underline"
+                    >
+                      {Object.entries(LANGUAGE_MAP).map(([code, info]) => (
+                        <option key={code} value={info.code}>{info.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {isThinking && (
+                  <div className="text-xs text-emerald-600 animate-pulse flex items-center gap-1">
+                    <div className="w-2 h-2 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin"></div>
+                    Generating response...
+                  </div>
+                )}
 
-        </div>
+              </div>
+              <Button
+                type="submit"
+                size="icon"
+                disabled={isThinking || !input.trim()}
+                className="bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 h-12 w-12 rounded-full shadow-lg hover:shadow-xl transition-all duration-200"
+              >
+                <Send className="h-5 w-5" />
+              </Button>
+            </form>
+            <p className="text-xs text-center text-gray-500 mt-1">
+              Powered by advanced AI technology • Information & awareness only
+            </p>
+
+          </div>
+        )}
       </div>
 
       {/* Scroll to bottom button */}

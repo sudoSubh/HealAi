@@ -2,17 +2,20 @@ import { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  MapPin, 
-  Phone, 
-  Clock, 
-  Star, 
+import {
+  MapPin,
+  Phone,
+  Star,
   Navigation,
   Hospital,
   Building,
-  AlertTriangle
+  CheckCircle,
+  Ambulance,
+  ExternalLink
 } from "lucide-react";
 import { HealthcareFacility } from "@/types/healthcare";
+import { cn } from "@/lib/utils";
+import healthcareData from "@/data/healthcare_data.json";
 
 interface NearbyHospitalsProps {
   className?: string;
@@ -21,186 +24,22 @@ interface NearbyHospitalsProps {
 export function NearbyHospitals({ className }: NearbyHospitalsProps) {
   const [hospitals, setHospitals] = useState<HealthcareFacility[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-  // Get user's current location
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setError("Your browser doesn't support location access.");
-      loadFallbackHospitals();
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const coords = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude,
-        };
-        setUserLocation(coords);
-        fetchNearbyHospitals(coords);
-      },
-      (err) => {
-        console.warn("Geolocation error:", err);
-        setError("Unable to get your location. Please enable location services to find nearby hospitals.");
-        loadFallbackHospitals();
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
-  }, []);
-
-  // Load empty array when location is not available
-  const loadFallbackHospitals = () => {
-    setHospitals([]);
-    setLoading(false);
-  };
-
-  // Fetch nearby hospitals using Google Places API
-  const fetchNearbyHospitals = async (coords: { lat: number; lng: number }) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      console.log("Fetching hospitals near:", coords);
-      
-      // Google Maps API key from environment variables
-      const API_KEY = (import.meta.env as any).VITE_GOOGLE_MAPS_API_KEY;
-      
-      // Make API call to our backend handler which proxies the Google Places API
-      // In Vercel deployment, frontend and API are on the same domain
-      // In local development, Vite proxy handles the routing
-      const response = await fetch(`/api/google-places?lat=${coords.lat}&lng=${coords.lng}&radius=10000&type=hospital`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      console.log("Received hospital data:", data.results.slice(0, 3)); // Log first 3 results
-      
-      // Transform Google Places data to HealthcareFacility format
-      const healthcareFacilities: HealthcareFacility[] = data.results.map((place: any) => {
-        // Use the distance calculated in the backend
-        const distance = place.distance ? place.distance.toFixed(1) + " km" : "Distance unknown";
-        
-        console.log(`Hospital: ${place.name}, Distance: ${distance}`); // Log each hospital and its distance
-        
-        // Determine ownership based on name keywords
-        const name = place.name.toLowerCase();
-        let ownership: "public" | "private" | "unknown" = "unknown";
-        if (
-          name.includes("government") ||
-          name.includes("public") ||
-          name.includes("district") ||
-          name.includes("municipal") ||
-          name.includes("community") ||
-          name.includes("aiims") ||
-          name.includes("pgimer")
-        ) {
-          ownership = "public";
-        } else if (
-          name.includes("apollo") ||
-          name.includes("fortis") ||
-          name.includes("max") ||
-          name.includes("manipal") ||
-          name.includes("columbia") ||
-          name.includes("narayana") ||
-          name.includes("sum") ||
-          name.includes("assure") ||
-          name.includes("igkc")
-        ) {
-          ownership = "private";
-        }
-
-        // Determine services based on types
-        const services: string[] = [];
-        if (place.types && place.types.includes("hospital")) services.push("Multi-Speciality");
-        if (place.types && place.types.includes("doctor")) services.push("General Medicine");
-        if (place.types && place.types.includes("dentist")) services.push("Dental Care");
-        if (place.types && place.types.includes("pharmacy")) services.push("Pharmacy");
-
-        // Get phone number from detailed data or use a default
-        const phone = place.formatted_phone_number || place.international_phone_number || "Phone not available";
-
-        // Get opening hours
-        let hours = "Hours not available";
-        if (place.opening_hours) {
-          hours = place.opening_hours.open_now ? "Open now" : "Closed";
-        }
-
-        return {
-          name: place.name,
-          type: place.types && place.types.includes("hospital") ? "Hospital" : "Healthcare Facility",
-          ownership,
-          address: place.formatted_address || place.vicinity || "Address not available",
-          distance: distance,
-          rating: place.rating || 0,
-          phone: place.formatted_phone_number || place.international_phone_number || "Phone not available",
-          hours: place.opening_hours ? (place.opening_hours.open_now ? "Open now" : "Closed") : "Hours not available",
-          services: services.length > 0 ? services : ["Multi-Speciality"],
-          coordinates: {
-            lat: place.geometry.location.lat,
-            lng: place.geometry.location.lng
-          },
-          reviews: place.user_ratings_total || 0,
-          emergency: place.types && place.types.includes("hospital"), // Assume hospitals have emergency services
-          website: place.website || "", // Add website if available
-          place_id: place.place_id || "" // Add place_id for directions
-        };
-      });
-      
-      // Since we can't make multiple API calls in the frontend due to CORS restrictions,
-      // we'll use the basic information from the nearby search
-      console.log("Processed hospitals:", healthcareFacilities.slice(0, 3)); // Log first 3 processed hospitals
-      
-      setHospitals(healthcareFacilities);
+    setLoading(true);
+    // Simulate loading local Excel data
+    const timer = setTimeout(() => {
+      setHospitals(healthcareData as any[]);
       setLoading(false);
-    } catch (err) {
-      console.error("Error fetching nearby hospitals:", err);
-      setError("Failed to load nearby hospitals. Please check your network connection and try again.");
-      loadFallbackHospitals();
-    }
-  };
-
-  // Get marker color based on facility ownership
-  const getMarkerColor = (ownership: string) => {
-    if (ownership === "public") return "bg-blue-500"; // Government hospitals - blue
-    if (ownership === "private") return "bg-green-500"; // Private hospitals - green
-    return "bg-purple-500"; // Other facilities - purple
-  };
+    }, 600);
+    return () => clearTimeout(timer);
+  }, []);
 
   if (loading) {
     return (
-      <div className={`space-y-4 ${className}`}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">Nearby Hospitals</h2>
-          <Badge variant="outline">Loading...</Badge>
-        </div>
-        
+      <div className={cn("space-y-4", className)}>
         {[1, 2, 3].map((i) => (
-          <Card key={i} className="animate-pulse">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <div className="h-6 bg-gray-200 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-                </div>
-                <div className="h-10 w-10 bg-gray-200 rounded-full"></div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="h-4 bg-gray-200 rounded w-full"></div>
-                <div className="h-4 bg-gray-200 rounded w-2/3"></div>
-                <div className="flex gap-2 mt-4">
-                  <div className="h-8 bg-gray-200 rounded w-24"></div>
-                  <div className="h-8 bg-gray-200 rounded w-24"></div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <Card key={i} className="animate-pulse h-40 rounded-3xl border-slate-200 dark:border-slate-800"></Card>
         ))}
       </div>
     );
@@ -208,148 +47,117 @@ export function NearbyHospitals({ className }: NearbyHospitalsProps) {
 
   return (
     <div className={className}>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-bold">Nearby Hospitals</h2>
-        {userLocation ? (
-          <Badge variant="outline" className="flex items-center gap-1">
-            <MapPin className="w-3 h-3" />
-            Location Detected
+      <div className="flex flex-col gap-1 mb-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Healthcare Directory</h2>
+          <Badge variant="secondary" className="bg-emerald-50 text-emerald-700 hover:bg-emerald-50 gap-1.5 border-emerald-100 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-900 font-black text-[10px] px-3 py-1">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            VERIFIED DATA
           </Badge>
-        ) : (
-          <Badge variant="outline" className="flex items-center gap-1">
-            <AlertTriangle className="w-3 h-3" />
-            Sample Data
-          </Badge>
-        )}
-      </div>
-      
-      {error && (
-        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-          {error}
         </div>
-      )}
-      
-      <div className="space-y-4">
-        {hospitals.map((hospital, index) => (
-          <Card 
-            key={hospital.name} 
-            className="hover:shadow-md transition-shadow cursor-pointer"
-          >
-            <CardHeader>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Trusted facilities in Bhubaneswar</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {hospitals.map((hospital) => (
+          <Card key={hospital.id} className="group relative bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 rounded-[32px] overflow-hidden hover:shadow-2xl hover:shadow-teal-500/10 hover:-translate-y-1 transition-all duration-300">
+            {/* Ownership Accent */}
+            <div className={cn("absolute top-0 left-0 w-2 h-full opacity-60", hospital.ownership === "public" ? "bg-blue-500" : "bg-emerald-500")} />
+            
+            <CardHeader className="pb-3 px-6 pt-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <CardTitle className="flex items-center gap-2">
-                    {hospital.ownership === "public" ? (
-                      <Building className="w-5 h-5 text-blue-500" />
-                    ) : (
-                      <Hospital className="w-5 h-5 text-green-500" />
-                    )}
-                    {hospital.name}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground mt-1">{hospital.address}</p>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <CardTitle className="text-lg font-black tracking-tight group-hover:text-teal-600 transition-colors">
+                      {hospital.name}
+                    </CardTitle>
+                  </div>
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    <MapPin className="w-3 h-3" />
+                    {hospital.address.split(',')[0]}
+                  </div>
                 </div>
-                <div className={`w-3 h-3 rounded-full ${getMarkerColor(hospital.ownership)}`}></div>
+                <div className={cn("w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-500/10 transition-transform group-hover:rotate-6", hospital.ownership === "public" ? "bg-blue-500" : "bg-emerald-500")}>
+                  {hospital.ownership === "public" ? (
+                    <Building className="w-5 h-5" />
+                  ) : (
+                    <Hospital className="w-5 h-5" />
+                  )}
+                </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3" />
-                    {hospital.distance}
-                  </Badge>
-                  {hospital.rating > 0 && (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-yellow-500 text-yellow-500" />
-                      {hospital.rating}
-                    </Badge>
-                  )}
-                  <Badge variant="secondary" className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    {hospital.hours}
-                  </Badge>
-                  {hospital.reviews && hospital.reviews > 0 && (
-                    <Badge variant="secondary">
-                      {hospital.reviews} reviews
-                    </Badge>
-                  )}
+            <CardContent className="px-6 pb-6">
+              <div className="flex flex-wrap gap-2.5 mb-6 text-[11px] font-black">
+                <Badge variant="outline" className="text-slate-500 border-slate-200 dark:border-slate-800 px-2 py-0.5 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                  {hospital.distance} AWAY
+                </Badge>
+                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-lg border border-amber-100 bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:border-amber-900/50">
+                  <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                  {hospital.rating}
                 </div>
-                
-                <div className="flex flex-wrap gap-1">
-                  {hospital.services.slice(0, 3).map((service, idx) => (
-                    <Badge key={idx} variant="outline" className="text-xs">
-                      {service}
-                    </Badge>
-                  ))}
-                  {hospital.services.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{hospital.services.length - 3} more
-                    </Badge>
-                  )}
-                </div>
-                
-                <div className="flex flex-wrap gap-2 mt-4">
+                <Badge className={cn("px-2 py-0.5 rounded-lg font-black", hospital.ownership === "public" ? "bg-blue-100 text-blue-700 border-blue-200" : "bg-emerald-100 text-emerald-700 border-emerald-200")}>
+                  {hospital.ownership.toUpperCase()}
+                </Badge>
+              </div>
+
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  className="h-10 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black gap-2 flex-1 rounded-2xl hover:opacity-90 active:scale-95 transition-all shadow-lg"
+                  onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hospital.name + " " + hospital.address)}`, '_blank')}
+                >
+                  <Navigation className="w-4 h-4" />
+                  DIRECTIONS
+                </Button>
+                {hospital.phone && (
                   <Button 
+                    variant="outline" 
                     size="sm" 
-                    variant="outline"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Open Google Maps with directions
-                      if (hospital.place_id) {
-                        // Use place_id for the most accurate directions
-                        window.open(
-                          `https://www.google.com/maps/dir/?api=1&destination_place_id=${hospital.place_id}`,
-                          '_blank'
-                        );
-                      } else if (hospital.coordinates) {
-                        // Fallback to coordinates with hospital name
-                        window.open(
-                          `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(hospital.name)}&destination_lat=${hospital.coordinates.lat}&destination_lng=${hospital.coordinates.lng}`,
-                          '_blank'
-                        );
-                      } else {
-                        // Last resort: just search for the hospital name
-                        window.open(
-                          `https://www.google.com/maps/search/${encodeURIComponent(hospital.name)}`,
-                          '_blank'
-                        );
-                      }
-                    }}
+                    className="h-10 w-10 p-0 rounded-2xl border-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all active:scale-95" 
+                    onClick={() => window.open(`tel:${hospital.phone}`)}
                   >
-                    <Navigation className="w-4 h-4 mr-2" />
-                    Get Directions
+                    <Phone className="w-4 h-4" />
                   </Button>
-                  {hospital.phone && hospital.phone !== "Phone not available" && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(`tel:${hospital.phone}`, '_blank');
-                      }}
-                    >
-                      <Phone className="w-4 h-4 mr-2" />
-                      Call
-                    </Button>
-                  )}
-                  {hospital.website && hospital.website !== "" && (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(hospital.website, '_blank');
-                      }}
-                    >
-                      Website
-                    </Button>
-                  )}
-                </div>
+                )}
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <div className="mt-8 p-6 rounded-[32px] bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 flex flex-col sm:flex-row items-center gap-4 group">
+        <div className="w-14 h-14 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-lg shadow-red-500/20 transition-transform group-hover:scale-110">
+          <Ambulance className="w-7 h-7" />
+        </div>
+        <div className="flex-1 text-center sm:text-left">
+          <h3 className="text-base font-black text-red-700 dark:text-red-400 uppercase tracking-tight">Need Immediate Assistance?</h3>
+          <p className="text-xs font-bold text-red-600/70 dark:text-red-500/60 uppercase tracking-widest mt-1">24/7 National Emergency Helpline · Call 112</p>
+        </div>
+        <Button className="bg-red-600 hover:bg-red-700 text-white font-black text-xs h-11 px-8 rounded-2xl shadow-xl active:scale-95 transition-all gap-2" onClick={() => window.open('tel:112')}>
+          <Phone className="w-4 h-4" />
+          CALL 112
+        </Button>
+      </div>
     </div>
+  );
+}
+
+function CheckCircle2(props: any) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
   );
 }

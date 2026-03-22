@@ -10,6 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import type { AnalysisResponse } from "@/services/symptom-checker-gemini-service";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 
 interface AnalysisResultsProps {
   data: AnalysisResponse | null | undefined;
@@ -258,21 +259,25 @@ ${data.disclaimer || 'No disclaimer provided'}
           <div className="space-y-4">
             {conditions.length > 0 ? (
               conditions.map((condition, index) => (
-                <Card key={index}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle>{condition.condition}</CardTitle>
-                      <Badge className={
-                        condition.probability === "High" ? "bg-red-500 hover:bg-red-600 text-white" :
-                        condition.probability === "Moderate" ? "bg-yellow-500 hover:bg-yellow-600 text-white" :
-                        "bg-green-500 hover:bg-green-600 text-white"
-                      }>
-                        {condition.probability} Probability
-                      </Badge>
-                    </div>
-                    <CardDescription>{condition.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
+                  <Card className="relative bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-white/40 dark:border-slate-800/50 shadow-lg hover:shadow-xl transition-all overflow-hidden rounded-2xl group">
+                    <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <CardHeader className="border-b border-slate-200/50 dark:border-slate-800/50 bg-white/40 dark:bg-slate-800/40 pb-4">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-700 to-indigo-600 dark:from-blue-400 dark:to-indigo-300">
+                          {condition.condition}
+                        </CardTitle>
+                        <Badge className={`font-bold px-3 py-1 ${
+                          condition.probability === "High" ? "bg-red-500/90 hover:bg-red-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)]" :
+                          condition.probability === "Moderate" ? "bg-amber-500/90 hover:bg-amber-600 text-white shadow-[0_0_15px_rgba(245,158,11,0.5)]" :
+                          "bg-emerald-500/90 hover:bg-emerald-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+                        }`}>
+                          {condition.probability} Match Match
+                        </Badge>
+                      </div>
+                      <CardDescription className="text-slate-600 dark:text-slate-300 font-medium mt-2">{condition.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-5 font-medium">
                     <div className="space-y-4">
                       <div>
                         <h4 className="font-medium mb-2">Reasoning</h4>
@@ -312,7 +317,8 @@ ${data.disclaimer || 'No disclaimer provided'}
                       )}
                     </div>
                   </CardContent>
-                </Card>
+                  </Card>
+                </motion.div>
               ))
             ) : (
               <Card>
@@ -328,22 +334,27 @@ ${data.disclaimer || 'No disclaimer provided'}
           <div className="space-y-4">
             {lifestyleImpact.length > 0 ? (
               lifestyleImpact.map((impact, index) => (
-                <Card key={index}>
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <Activity className="h-5 w-5" />
-                      <CardTitle>{impact.factor}</CardTitle>
-                    </div>
-                    <CardDescription>{impact.impact}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-1">
-                      {impact.recommendations?.map((rec, idx) => (
-                        <li key={idx} className="text-sm">• {rec}</li>
-                      )) || <li className="text-sm">No recommendations provided</li>}
-                    </ul>
-                  </CardContent>
-                </Card>
+                <motion.div key={index} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
+                  <Card className="relative bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-white/40 dark:border-slate-800/50 shadow-lg hover:shadow-xl transition-all overflow-hidden rounded-2xl group">
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-blue-400 to-indigo-500 opacity-80" />
+                    <CardHeader className="bg-white/40 dark:bg-slate-800/40 pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-xl">
+                          <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <CardTitle className="text-lg text-slate-800 dark:text-slate-100">{impact.factor}</CardTitle>
+                      </div>
+                      <CardDescription className="ml-[44px]">{impact.impact}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-4 p-6">
+                      <ul className="space-y-2">
+                        {impact.recommendations?.map((rec, idx) => (
+                          <li key={idx} className="text-sm flex items-start text-slate-700 dark:text-slate-300"><span className="text-blue-500 mr-2 mt-0.5">•</span> {rec}</li>
+                        )) || <li className="text-sm">No recommendations provided</li>}
+                      </ul>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))
             ) : (
               <Card>
@@ -359,22 +370,29 @@ ${data.disclaimer || 'No disclaimer provided'}
           <div className="space-y-4">
             {remedyRecommendations.length > 0 ? (
               remedyRecommendations.map((remedy, index) => (
-                <Card key={index}>
-                  <CardHeader>
-                    <div className="flex items-center gap-2">
-                      <Leaf className="h-5 w-5" />
-                      <CardTitle>{remedy.type}</CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <Alert variant="destructive" className="mb-4">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertTitle>Warning</AlertTitle>
-                      <AlertDescription>{remedy.warning || 'No warning provided'}</AlertDescription>
-                    </Alert>
-                    <p className="text-sm">{remedy.recommendation || 'No recommendation provided'}</p>
-                  </CardContent>
-                </Card>
+                <motion.div key={index} initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.1 }}>
+                  <Card className="relative bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-white/40 dark:border-slate-800/50 shadow-lg hover:shadow-xl transition-all overflow-hidden rounded-2xl group">
+                    <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 to-teal-500 opacity-80" />
+                    <CardHeader className="bg-white/40 dark:bg-slate-800/40 pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-emerald-100 dark:bg-emerald-900/40 rounded-xl">
+                          <Leaf className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <CardTitle className="text-lg text-slate-800 dark:text-slate-100">{remedy.type}</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-6 pt-4">
+                      {remedy.warning && (
+                        <Alert variant="destructive" className="mb-4 bg-red-50/50 dark:bg-red-900/20 shadow-sm border-red-200/50">
+                          <AlertTriangle className="h-4 w-4" />
+                          <AlertTitle>Warning</AlertTitle>
+                          <AlertDescription>{remedy.warning}</AlertDescription>
+                        </Alert>
+                      )}
+                      <p className="text-sm text-slate-700 dark:text-slate-300 font-medium leading-relaxed">{remedy.recommendation || 'No recommendation provided'}</p>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               ))
             ) : (
               <Card>
@@ -389,57 +407,72 @@ ${data.disclaimer || 'No disclaimer provided'}
         <TabsContent value="recommendations">
           <div className="space-y-4">
             {preventiveMeasures.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-5 w-5" />
-                    <CardTitle>Preventive Measures</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-1">
-                    {preventiveMeasures.map((measure, index) => (
-                      <li key={index} className="text-sm">• {measure}</li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                <Card className="relative bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-white/40 dark:border-slate-800/50 shadow-lg rounded-2xl overflow-hidden">
+                  <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-blue-400 to-indigo-500 opacity-80" />
+                  <CardHeader className="bg-white/40 dark:bg-slate-800/40">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-xl">
+                        <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <CardTitle>Preventive Measures</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <ul className="space-y-2">
+                      {preventiveMeasures.map((measure, index) => (
+                        <li key={index} className="text-sm flex items-start text-slate-700 dark:text-slate-300"><span className="text-blue-500 mr-2 mt-0.5">•</span> {measure}</li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </motion.div>
             )}
 
             {followUpRecommendations.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
-                    <CardTitle>Follow-up Recommendations</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-1">
-                    {followUpRecommendations.map((rec, index) => (
-                      <li key={index} className="text-sm">• {rec}</li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                <Card className="relative bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-white/40 dark:border-slate-800/50 shadow-lg rounded-2xl overflow-hidden">
+                  <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-purple-400 to-pink-500 opacity-80" />
+                  <CardHeader className="bg-white/40 dark:bg-slate-800/40">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-xl">
+                        <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <CardTitle>Follow-up Recommendations</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <ul className="space-y-2">
+                      {followUpRecommendations.map((rec, index) => (
+                        <li key={index} className="text-sm flex items-start text-slate-700 dark:text-slate-300"><span className="text-purple-500 mr-2 mt-0.5">•</span> {rec}</li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </motion.div>
             )}
 
             {specialistReferrals.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Stethoscope className="h-5 w-5" />
-                    <CardTitle>Specialist Referrals</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <ul className="space-y-1">
-                    {specialistReferrals.map((specialist, index) => (
-                      <li key={index} className="text-sm">• {specialist}</li>
-                    ))}
-                  </ul>
-                </CardContent>
-              </Card>
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                <Card className="relative bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-white/40 dark:border-slate-800/50 shadow-lg rounded-2xl overflow-hidden">
+                  <div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-amber-400 to-orange-500 opacity-80" />
+                  <CardHeader className="bg-white/40 dark:bg-slate-800/40">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-xl">
+                        <Stethoscope className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <CardTitle>Specialist Referrals</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <ul className="space-y-2">
+                      {specialistReferrals.map((specialist, index) => (
+                        <li key={index} className="text-sm flex items-start text-slate-700 dark:text-slate-300"><span className="text-amber-500 mr-2 mt-0.5">•</span> {specialist}</li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </motion.div>
             )}
 
             {preventiveMeasures.length === 0 && 

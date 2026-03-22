@@ -73,9 +73,9 @@ Medications: ${profile.medications.join(", ") || "None"}.`
       ? `Report findings: ${reportSummary.slice(0, 600)}`
       : "";
 
-    const prompt = `You are a doctor and wellness expert. Based on the patient profile below, generate:
-1. Daily lifestyle recommendations (morning, afternoon, evening)
-2. Natural home remedies for their specific conditions
+    const prompt = `You are an Indian doctor and wellness expert. Based on the patient profile and medical report findings below, generate:
+1. Daily lifestyle recommendations (morning, afternoon, evening) tailored strictly to their reports
+2. Natural Indian/Ayurvedic home remedies for their specific conditions and report anomalies
 
 ${profileStr}
 ${reportStr}
@@ -105,7 +105,7 @@ Return ONLY valid JSON (no markdown, no extra text):
 Generate at least 2 recommendations per time slot and 3 remedies. Be specific to the conditions.`;
 
     try {
-      const raw = await callGemini(prompt);
+      const raw = await callGemini(prompt, undefined, undefined, "daily-insight");
       const clean = raw.replace(/```json\n?/g, "").replace(/```/g, "").trim();
       const parsed: AdviceData = JSON.parse(clean);
       setData(parsed);

@@ -49,7 +49,7 @@ Return ONLY a raw JSON array (no markdown, no code blocks, no explanation) of 5 
 Make content highly specific to ${location}'s current season (${new Date().toLocaleString("en-US", { month: "long" })}), climate, common diseases, and local health infrastructure.
 Start with [ and end with ]. No other text.`;
 
-  const text = await callGemini(prompt);
+  const text = await callGemini(prompt, undefined, undefined, "daily-insight");
   const jsonStart = text.indexOf("[");
   const jsonEnd = text.lastIndexOf("]") + 1;
   if (jsonStart === -1 || jsonEnd === 0) throw new Error("No JSON array in response");
