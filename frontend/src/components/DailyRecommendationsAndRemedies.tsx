@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lightbulb, Pill, Activity, Clock } from "lucide-react";
-import { motion } from "framer-motion";
+import { Lightbulb, Pill, Activity, Clock, Sun, Moon, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { callGemini } from "@/services/gemini";
+import { UserProfile } from "./UserProfileComponent";
 
 interface Recommendation {
+  time: "morning" | "afternoon" | "evening";
   title: string;
   description: string;
-  icon: React.ElementType;
-  category: "morning" | "afternoon" | "evening" | "all-day";
   priority: "high" | "medium" | "low";
 }
 
@@ -17,210 +19,292 @@ interface Remedy {
   name: string;
   condition: string;
   description: string;
-  dosage?: string;
-  frequency?: string;
-  sideEffects?: string[];
-  notes: string;
+  howTo: string;
+  frequency: string;
+  warnings: string;
 }
 
-export function DailyRecommendationsAndRemedies({ reportAnalysis }: { reportAnalysis?: any }) {
-  const [recommendations] = useState<Recommendation[]>([
-    {
-      title: "Morning Meditation",
-      description: "Start your day with 10 minutes of meditation to reduce stress and improve focus",
-      icon: Activity,
-      category: "morning",
-      priority: "high",
-    },
-    {
-      title: "Drink Water",
-      description: "Drink a glass of warm water with lemon to aid digestion",
-      icon: Lightbulb,
-      category: "morning",
-      priority: "high",
-    },
-    {
-      title: "Evening Walk",
-      description: "Take a 30-minute walk after dinner to aid digestion and maintain healthy weight",
-      icon: Activity,
-      category: "evening",
-      priority: "medium",
-    },
-    {
-      title: "Sleep Early",
-      description: "Maintain a consistent sleep schedule with at least 7-8 hours of sleep",
-      icon: Clock,
-      category: "evening",
-      priority: "high",
-    },
-  ]);
+interface AdviceData {
+  recommendations: Recommendation[];
+  remedies: Remedy[];
+  disclaimer: string;
+}
 
-  const [remedies] = useState<Remedy[]>([
-    {
-      name: "Turmeric + Ginger Tea",
-      condition: "Inflammation & Joint Pain",
-      description: "Natural anti-inflammatory remedy to reduce joint pain and improve mobility",
-      frequency: "2 times daily",
-      sideEffects: ["Mild stomach upset (rare)"],
-      notes: "Drink warm, best in morning and evening",
-    },
-    {
-      name: "Cinnamon Water",
-      condition: "Blood Sugar Control",
-      description: "Helps regulate blood sugar levels naturally",
-      frequency: "Once daily in the morning",
-      sideEffects: [],
-      notes: "Take on empty stomach for best results",
-    },
-    {
-      name: "Fenugreek Seeds",
-      condition: "Diabetes Management",
-      description: "Soaked overnight fenugreek seeds help control blood glucose levels",
-      frequency: "Once daily in the morning",
-      sideEffects: ["Possible maple syrup smell in urine"],
-      notes: "Soak 1 teaspoon overnight and consume with water",
-    },
-  ]);
+interface DailyRecommendationsAndRemediesProps {
+  profile?: UserProfile;
+  reportSummary?: string;
+}
 
-  const priorityColors = {
-    high: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200",
-    medium: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-200",
-    low: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200",
+const PRIORITY_COLORS = {
+  high: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200",
+  medium: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200",
+  low: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200",
+};
+
+const TIME_ICONS = {
+  morning: Sun,
+  afternoon: Activity,
+  evening: Moon,
+};
+
+function loadSaved(): AdviceData | null {
+  try { return JSON.parse(localStorage.getItem("dailyAdvice") || "null"); } catch { return null; }
+}
+
+export function DailyRecommendationsAndRemedies({ profile, reportSummary }: DailyRecommendationsAndRemediesProps) {
+  const [data, setData] = useState<AdviceData | null>(loadSaved);
+  const [loading, setLoading] = useState(false);
+  const [activeTime, setActiveTime] = useState<"morning" | "afternoon" | "evening">("morning");
+
+  useEffect(() => {
+    if (data) localStorage.setItem("dailyAdvice", JSON.stringify(data));
+  }, [data]);
+
+  const generate = async () => {
+    setLoading(true);
+    const profileStr = profile
+      ? `Patient: ${profile.name || "Unknown"}, Age ${profile.age || "?"}, ${profile.gender}.
+Conditions: ${profile.medicalConditions.join(", ") || "None"}.
+Allergies: ${profile.allergies.join(", ") || "None"}.
+Medications: ${profile.medications.join(", ") || "None"}.`
+      : "General healthy adult.";
+
+    const reportStr = reportSummary
+      ? `Report findings: ${reportSummary.slice(0, 600)}`
+      : "";
+
+    const prompt = `You are a doctor and wellness expert. Based on the patient profile below, generate:
+1. Daily lifestyle recommendations (morning, afternoon, evening)
+2. Natural home remedies for their specific conditions
+
+${profileStr}
+${reportStr}
+
+Return ONLY valid JSON (no markdown, no extra text):
+{
+  "recommendations": [
+    {"time": "morning", "title": "...", "description": "...", "priority": "high|medium|low"},
+    {"time": "morning", "title": "...", "description": "...", "priority": "high|medium|low"},
+    {"time": "afternoon", "title": "...", "description": "...", "priority": "high|medium|low"},
+    {"time": "afternoon", "title": "...", "description": "...", "priority": "medium|low"},
+    {"time": "evening", "title": "...", "description": "...", "priority": "high|medium|low"},
+    {"time": "evening", "title": "...", "description": "...", "priority": "medium"}
+  ],
+  "remedies": [
+    {
+      "name": "remedy name",
+      "condition": "which condition this treats",
+      "description": "what it does",
+      "howTo": "exactly how to prepare and use",
+      "frequency": "how often",
+      "warnings": "any contraindications or side effects"
+    }
+  ],
+  "disclaimer": "one sentence medical disclaimer"
+}
+Generate at least 2 recommendations per time slot and 3 remedies. Be specific to the conditions.`;
+
+    try {
+      const raw = await callGemini(prompt);
+      const clean = raw.replace(/```json\n?/g, "").replace(/```/g, "").trim();
+      const parsed: AdviceData = JSON.parse(clean);
+      setData(parsed);
+    } catch {
+      // If JSON parse fails, try to use raw text as disclaimer
+      setData({
+        recommendations: [],
+        remedies: [],
+        disclaimer: "Could not parse AI response. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const categoryIcons = {
-    morning: "🌅",
-    afternoon: "☀️",
-    evening: "🌙",
-    "all-day": "⏰",
-  };
+  const recsFor = (time: "morning" | "afternoon" | "evening") =>
+    data?.recommendations.filter((r) => r.time === time) ?? [];
 
   return (
     <div className="space-y-6">
-      {/* Daily Recommendations */}
+      {/* Daily Recommendations Card */}
       <Card className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 dark:from-amber-900/20 dark:to-orange-900/10 border-amber-200/50 dark:border-amber-800/30 shadow-lg rounded-2xl overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-amber-500 to-orange-600" />
+        <div className="h-2 bg-gradient-to-r from-amber-500 to-orange-500" />
         <CardHeader>
-          <CardTitle className="flex items-center text-foreground">
-            <Lightbulb className="w-5 h-5 mr-2 text-amber-600 dark:text-amber-400" />
-            Daily Recommendations
-          </CardTitle>
-          <CardDescription>
-            Personalized daily activities and habits to improve your health
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center text-foreground">
+                <Lightbulb className="w-5 h-5 mr-2 text-amber-600 dark:text-amber-400" />
+                Daily Recommendations
+              </CardTitle>
+              <CardDescription>Personalized activities to improve your health day by day</CardDescription>
+            </div>
+            <Button
+              onClick={generate}
+              disabled={loading}
+              size="sm"
+              className="rounded-full bg-amber-500 hover:bg-amber-600 text-white gap-1"
+            >
+              {loading ? (
+                <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating…</>
+              ) : data ? (
+                <><RefreshCw className="w-3.5 h-3.5" /> Refresh</>
+              ) : (
+                <><Lightbulb className="w-3.5 h-3.5" /> Generate</>
+              )}
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="all-day" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 rounded-lg">
-              <TabsTrigger value="morning" className="rounded-md">Morning</TabsTrigger>
-              <TabsTrigger value="afternoon" className="rounded-md">Afternoon</TabsTrigger>
-              <TabsTrigger value="evening" className="rounded-md">Evening</TabsTrigger>
-              <TabsTrigger value="all-day" className="rounded-md">All Day</TabsTrigger>
-            </TabsList>
 
-            {["morning", "afternoon", "evening", "all-day"].map((time) => (
-              <TabsContent key={time} value={time} className="space-y-3 mt-4">
-                {recommendations
-                  .filter((rec) => rec.category === time)
-                  .map((rec, index) => {
-                    const Icon = rec.icon;
-                    return (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="p-4 rounded-lg bg-white/50 dark:bg-slate-800/30 border border-amber-200/30 dark:border-amber-800/20"
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-3 flex-1">
-                            <Icon className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-1 flex-shrink-0" />
-                            <div>
-                              <p className="font-medium text-foreground">{rec.title}</p>
-                              <p className="text-sm text-muted-foreground mt-1">{rec.description}</p>
+        <CardContent>
+          {!data && !loading && (
+            <div className="text-center py-8">
+              <Clock className="w-10 h-10 mx-auto mb-3 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">
+                Click <strong>Generate</strong> to get personalized daily recommendations based on your profile.
+              </p>
+            </div>
+          )}
+
+          {loading && (
+            <div className="flex items-center justify-center py-10 gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-amber-600" />
+              <p className="text-sm text-muted-foreground">Generating your recommendations…</p>
+            </div>
+          )}
+
+          {data && !loading && (
+            <Tabs value={activeTime} onValueChange={(v) => setActiveTime(v as typeof activeTime)}>
+              <TabsList className="grid w-full grid-cols-3 rounded-xl">
+                <TabsTrigger value="morning" className="rounded-lg gap-1.5">
+                  <Sun className="w-3.5 h-3.5" /> Morning
+                </TabsTrigger>
+                <TabsTrigger value="afternoon" className="rounded-lg gap-1.5">
+                  <Activity className="w-3.5 h-3.5" /> Afternoon
+                </TabsTrigger>
+                <TabsTrigger value="evening" className="rounded-lg gap-1.5">
+                  <Moon className="w-3.5 h-3.5" /> Evening
+                </TabsTrigger>
+              </TabsList>
+
+              {(["morning", "afternoon", "evening"] as const).map((time) => (
+                <TabsContent key={time} value={time} className="space-y-3 mt-4">
+                  <AnimatePresence mode="wait">
+                    {recsFor(time).length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">No recommendations for this time slot.</p>
+                    ) : (
+                      recsFor(time).map((rec, i) => {
+                        const Icon = TIME_ICONS[time];
+                        return (
+                          <motion.div
+                            key={i}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.07 }}
+                            className="p-4 rounded-xl bg-white/60 dark:bg-slate-800/40 border border-amber-200/30 dark:border-amber-800/20"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center flex-shrink-0">
+                                  <Icon className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-foreground">{rec.title}</p>
+                                  <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{rec.description}</p>
+                                </div>
+                              </div>
+                              <Badge className={`${PRIORITY_COLORS[rec.priority]} flex-shrink-0 text-xs`}>
+                                {rec.priority.charAt(0).toUpperCase() + rec.priority.slice(1)}
+                              </Badge>
                             </div>
-                          </div>
-                          <Badge className={priorityColors[rec.priority]}>
-                            {rec.priority.charAt(0).toUpperCase() + rec.priority.slice(1)}
-                          </Badge>
-                        </div>
-                      </motion.div>
-                    );
-                  })}
-              </TabsContent>
-            ))}
-          </Tabs>
+                          </motion.div>
+                        );
+                      })
+                    )}
+                  </AnimatePresence>
+                </TabsContent>
+              ))}
+            </Tabs>
+          )}
         </CardContent>
       </Card>
 
-      {/* Home Remedies */}
-      <Card className="bg-gradient-to-br from-red-50/50 to-rose-50/30 dark:from-red-900/20 dark:to-rose-900/10 border-red-200/50 dark:border-red-800/30 shadow-lg rounded-2xl overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-red-500 to-rose-600" />
+      {/* Home Remedies Card */}
+      <Card className="bg-gradient-to-br from-rose-50/50 to-red-50/30 dark:from-rose-900/20 dark:to-red-900/10 border-rose-200/50 dark:border-rose-800/30 shadow-lg rounded-2xl overflow-hidden">
+        <div className="h-2 bg-gradient-to-r from-rose-500 to-red-500" />
         <CardHeader>
           <CardTitle className="flex items-center text-foreground">
-            <Pill className="w-5 h-5 mr-2 text-red-600 dark:text-red-400" />
+            <Pill className="w-5 h-5 mr-2 text-rose-600 dark:text-rose-400" />
             Natural Home Remedies
           </CardTitle>
-          <CardDescription>
-            Proven natural remedies to manage your health conditions
-          </CardDescription>
+          <CardDescription>Proven natural remedies tailored to your health conditions</CardDescription>
         </CardHeader>
+
         <CardContent className="space-y-4">
-          {remedies.map((remedy, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="p-4 rounded-lg bg-white/50 dark:bg-slate-800/30 border border-red-200/30 dark:border-red-800/20 space-y-3"
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-semibold text-foreground">{remedy.name}</p>
-                  <Badge variant="outline" className="mt-1 text-xs">{remedy.condition}</Badge>
-                </div>
-              </div>
+          {!data && !loading && (
+            <div className="text-center py-8">
+              <Pill className="w-10 h-10 mx-auto mb-3 text-muted-foreground/30" />
+              <p className="text-sm text-muted-foreground">Generate recommendations above to see personalized remedies.</p>
+            </div>
+          )}
 
-              <p className="text-sm text-muted-foreground">{remedy.description}</p>
+          {loading && (
+            <div className="flex items-center justify-center py-8 gap-3">
+              <Loader2 className="w-5 h-5 animate-spin text-rose-600" />
+              <p className="text-sm text-muted-foreground">Preparing remedies…</p>
+            </div>
+          )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                {remedy.frequency && (
-                  <div className="p-2 rounded bg-amber-50/50 dark:bg-amber-900/20">
-                    <p className="text-muted-foreground font-medium">Frequency</p>
-                    <p className="text-foreground">{remedy.frequency}</p>
-                  </div>
-                )}
-                {remedy.dosage && (
-                  <div className="p-2 rounded bg-blue-50/50 dark:bg-blue-900/20">
-                    <p className="text-muted-foreground font-medium">Dosage</p>
-                    <p className="text-foreground">{remedy.dosage}</p>
-                  </div>
-                )}
-              </div>
+          {data && !loading && (
+            <AnimatePresence>
+              {data.remedies.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">No remedies generated yet.</p>
+              ) : (
+                data.remedies.map((remedy, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.1 }}
+                    className="p-4 rounded-xl bg-white/60 dark:bg-slate-800/40 border border-rose-200/30 dark:border-rose-800/20 space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{remedy.name}</p>
+                        <Badge variant="outline" className="mt-1 text-xs">{remedy.condition}</Badge>
+                      </div>
+                      <Badge className="bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-200 flex-shrink-0 text-xs">
+                        {remedy.frequency}
+                      </Badge>
+                    </div>
 
-              {remedy.sideEffects && remedy.sideEffects.length > 0 && (
-                <div className="p-2 rounded bg-red-50/50 dark:bg-red-900/20 border border-red-200/30 dark:border-red-800/20">
-                  <p className="text-xs font-medium text-red-900 dark:text-red-200">Possible Side Effects:</p>
-                  <ul className="text-xs text-red-800 dark:text-red-300 mt-1 space-y-1">
-                    {remedy.sideEffects.map((effect, i) => (
-                      <li key={i}>• {effect}</li>
-                    ))}
-                  </ul>
-                </div>
+                    <p className="text-xs text-muted-foreground">{remedy.description}</p>
+
+                    <div className="p-2.5 rounded-lg bg-green-50/60 dark:bg-green-900/20 border border-green-200/30">
+                      <p className="text-xs font-medium text-green-900 dark:text-green-200 mb-1">How to Prepare:</p>
+                      <p className="text-xs text-green-800 dark:text-green-300 leading-relaxed">{remedy.howTo}</p>
+                    </div>
+
+                    {remedy.warnings && (
+                      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-red-50/60 dark:bg-red-900/20 border border-red-200/30">
+                        <AlertTriangle className="w-3.5 h-3.5 text-red-600 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-red-800 dark:text-red-300">{remedy.warnings}</p>
+                      </div>
+                    )}
+                  </motion.div>
+                ))
               )}
+            </AnimatePresence>
+          )}
 
-              {remedy.notes && (
-                <p className="text-xs text-muted-foreground italic">💡 {remedy.notes}</p>
-              )}
-            </motion.div>
-          ))}
+          {data?.disclaimer && (
+            <div className="p-3 rounded-lg bg-slate-100 dark:bg-slate-800/50 border border-slate-200/50">
+              <p className="text-xs text-muted-foreground">
+                <strong>Disclaimer:</strong> {data.disclaimer}
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      <div className="p-4 rounded-lg bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/30 dark:border-blue-800/20">
-        <p className="text-xs text-blue-900 dark:text-blue-200">
-          ⚠️ <strong>Disclaimer:</strong> These recommendations and remedies are suggestions based on your medical reports. Always consult with your healthcare provider before starting any new treatment or remedy.
-        </p>
-      </div>
     </div>
   );
 }

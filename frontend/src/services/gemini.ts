@@ -8,13 +8,17 @@ if (!GEMINI_API_KEY) {
 
 const client = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-export async function callGemini(prompt: string, imageBase64?: string): Promise<string> {
+export async function callGemini(
+  prompt: string,
+  imageBase64?: string,
+  mimeType = "image/jpeg"
+): Promise<string> {
   try {
     const model = client.getGenerativeModel({ model: "gemini-2.0-flash" });
-    
+
     const parts: any[] = [];
     if (imageBase64 && typeof imageBase64 === "string") {
-      parts.push({ inlineData: { data: imageBase64, mimeType: "image/jpeg" } });
+      parts.push({ inlineData: { data: imageBase64, mimeType } });
     }
     parts.push({ text: prompt });
 
