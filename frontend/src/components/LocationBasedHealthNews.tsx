@@ -1,17 +1,21 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  WifiOff, 
-  ExternalLink, 
+import {
+  ExternalLink,
   RefreshCw,
   AlertTriangle,
   Info,
   TrendingUp,
-  Shield
+  Shield,
+  MapPin,
+  Loader2,
 } from "lucide-react";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const GEMINI_API_KEY = "AIzaSyC1FbrqKHMkS18alFf0JvSXImNdDWkyGMs";
 
 interface HealthNewsItem {
   id: string;
@@ -26,187 +30,164 @@ interface HealthNewsItem {
   tags: string[];
 }
 
-// Hardcoded fallback health updates data
-const FALLBACK_HEALTH_NEWS: HealthNewsItem[] = [
-  {
-    id: "fallback-1",
-    title: "Covid-19 Monitoring and Alerts",
-    summary: "Odisha reports low but ongoing Covid-19 cases, with a recent new death in Bhubaneswar marking the state's first Covid-19 fatality of 2025. A sub-variant strain JN.1 of Omicron has been detected in recent cases. The government continues to urge adherence to Covid-19 protocols, increased testing, and vaccination to control transmission during festivals and public gatherings like Rath Yatra.",
-    source: "Odisha Health Department",
-    publishedAt: new Date().toISOString().split('T')[0],
-    url: "https://health.odisha.gov.in/",
-    category: "advisory",
-    location: "Bhubaneswar",
-    priority: "high",
-    tags: ["covid-19", "JN.1", "vaccination", "testing"]
-  },
-  {
-    id: "fallback-2",
-    title: "Doctor Shortage in Government Facilities",
-    summary: "A critical shortage of doctors persists in Odisha's government hospitals, with nearly 4,880 medical officer positions vacant statewide, including in Bhubaneswar. This shortage could strain healthcare delivery, especially in peak illness seasons. Recruitment and incentives are under discussion.",
-    source: "Odisha Health Department",
-    publishedAt: new Date().toISOString().split('T')[0],
-    url: "https://dphodisha.nic.in/",
-    category: "news",
-    location: "Bhubaneswar",
-    priority: "high",
-    tags: ["doctor shortage", "government hospitals", "recruitment"]
-  },
-  {
-    id: "fallback-3",
-    title: "Heavy Rainfall Alert and Preparedness",
-    summary: "Odisha, including Bhubaneswar, is under high alert for heavy rainfall and potential flooding. The health department has issued warnings for vector-borne diseases like dengue and malaria, which tend to spike after rains, along with other communicable diseases.",
-    source: "Odisha State Disaster Management Authority",
-    publishedAt: new Date().toISOString().split('T')[0],
-    url: "https://osdma.org/",
-    category: "advisory",
-    location: "Bhubaneswar",
-    priority: "critical",
-    tags: ["rainfall", "flooding", "dengue", "malaria", "vector-borne diseases"]
-  },
-  {
-    id: "fallback-4",
-    title: "Unified Health Insurance Rollout",
-    summary: "The state has launched a unified health insurance scheme offering cashless treatment for millions of families, promoting wider healthcare access. This initiative aims to improve financial protection against health emergencies for Bhubaneswar residents.",
-    source: "Odisha Health Department",
-    publishedAt: new Date().toISOString().split('T')[0],
-    url: "https://health.odisha.gov.in/",
-    category: "news",
-    location: "Bhubaneswar",
-    priority: "medium",
-    tags: ["health insurance", "cashless treatment", "financial protection"]
-  },
-  {
-    id: "fallback-5",
-    title: "Focus on Traditional Medicine",
-    summary: "With rising urban health challenges, there is a push to strengthen Ayurveda and AYUSH systems for preventive and holistic healthcare. Expanded Ayurvedic services create additional care options amidst ongoing public health concerns.",
-    source: "Odisha AYUSH Department",
-    publishedAt: new Date().toISOString().split('T')[0],
-    url: "https://ayushodisha.nic.in/",
-    category: "awareness",
-    location: "Bhubaneswar",
-    priority: "medium",
-    tags: ["Ayurveda", "AYUSH", "preventive care", "holistic healthcare"]
-  }
-];
+async function generateNewsWithGemini(location: string): Promise<HealthNewsItem[]> {
+  const client = new GoogleGenerativeAI(GEMINI_API_KEY);
+  const model = client.getGenerativeModel({ model: "gemini-2.0-flash" });
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+  });
+
+  const prompt = `Today is ${today}. Generate 5 realistic, current health news items specifically for ${location}.
+Return ONLY a raw JSON array (no markdown, no code blocks, no explanation) of 5 objects with these exact keys:
+- id: unique string like "news-1"
+- title: short headline specific to ${location}
+- summary: 2–3 sentence summary mentioning ${location} and current date context
+- source: realistic local health authority or news source name
+- publishedAt: "${new Date().toISOString().split("T")[0]}"
+- url: "https://health.gov/"
+- category: one of: news, advisory, campaign, awareness
+- location: "${location}"
+- priority: one of: low, medium, high, critical
+- tags: array of 3 relevant strings
+
+Make content highly specific to ${location}'s current season (${new Date().toLocaleString("en-US", { month: "long" })}), climate, common diseases, and local health infrastructure.
+Start with [ and end with ]. No other text.`;
+
+  const result = await model.generateContent(prompt);
+  const text = result.response.text();
+  const jsonStart = text.indexOf("[");
+  const jsonEnd = text.lastIndexOf("]") + 1;
+  if (jsonStart === -1 || jsonEnd === 0) throw new Error("No JSON array in response");
+  return JSON.parse(text.substring(jsonStart, jsonEnd));
+}
 
 interface LocationBasedHealthNewsProps {
   className?: string;
+  location?: { city?: string | null; region?: string | null; country?: string | null };
 }
 
-export function LocationBasedHealthNews({ className }: LocationBasedHealthNewsProps) {
-  const [news] = useState<HealthNewsItem[]>(FALLBACK_HEALTH_NEWS);
-  const [loading] = useState(false);
+export function LocationBasedHealthNews({ className, location }: LocationBasedHealthNewsProps) {
+  const [news, setNews] = useState<HealthNewsItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const locationStr = [location?.city, location?.region, location?.country].filter(Boolean).join(", ");
+  const cacheKey = `locationNews_${locationStr.toLowerCase().replace(/\s+/g, "_")}`;
+
+  const load = async (force = false) => {
+    if (!locationStr) return;
+    if (!force) {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const { data, timestamp } = JSON.parse(cached);
+          if (Date.now() - timestamp < 24 * 60 * 60 * 1000) {
+            setNews(data);
+            return;
+          }
+        } catch { /* ignore */ }
+      }
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await generateNewsWithGemini(locationStr);
+      localStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
+      setNews(data);
+    } catch {
+      setError("Failed to generate health news. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationStr]);
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'advisory':
-        return <AlertTriangle className="w-3 h-3" />;
-      case 'campaign':
-        return <TrendingUp className="w-3 h-3" />;
-      case 'awareness':
-        return <Shield className="w-3 h-3" />;
-      default:
-        return <Info className="w-3 h-3" />;
+      case "advisory": return <AlertTriangle className="w-3 h-3" />;
+      case "campaign": return <TrendingUp className="w-3 h-3" />;
+      case "awareness": return <Shield className="w-3 h-3" />;
+      default: return <Info className="w-3 h-3" />;
     }
   };
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'advisory':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300';
-      case 'campaign':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
-      case 'awareness':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300';
-      default:
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300';
+      case "advisory": return "bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300";
+      case "campaign": return "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300";
+      case "awareness": return "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300";
+      default: return "bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'critical':
-        return 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300';
-      case 'high':
-        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300';
-      default:
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300';
+      case "critical": return "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300";
+      case "high": return "bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300";
+      case "medium": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300";
+      default: return "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300";
     }
-  };
-
-  const handleRefresh = () => {
-    // Refresh functionality - in this case, just reload the hardcoded data
-    window.location.reload();
   };
 
   return (
     <Card className={className}>
       <CardHeader>
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            Bhubaneswar Health News
+          <CardTitle className="flex items-center gap-2 text-base">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            {locationStr ? `${locationStr} Health News` : "Local Health News"}
+            {locationStr && (
+              <Badge variant="outline" className="ml-1 text-xs flex items-center gap-1">
+                <MapPin className="w-2.5 h-2.5" />
+                AI Generated
+              </Badge>
+            )}
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="sm"
-              onClick={handleRefresh}
-              disabled={loading}
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => load(true)}
+            disabled={loading}
+            className="h-8 w-8 p-0"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
-        {news.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-10 gap-3">
+            <Loader2 className="w-8 h-8 text-teal-500 animate-spin" />
+            <p className="text-sm text-muted-foreground">
+              Generating health news for {locationStr}…
+            </p>
+          </div>
+        ) : error ? (
           <div className="text-center py-8">
-            <WifiOff className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="font-medium mb-2">No Real-Time Health Updates</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Currently, no real-time health updates are available from government sources for Bhubaneswar, Odisha.
-            </p>
-            <p className="text-xs text-muted-foreground mb-4">
-              This system only displays verified real-time updates from official government health departments.
-            </p>
-            <div className="flex flex-col gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => window.open("https://health.odisha.gov.in/", "_blank")}
-              >
-                Visit Official Health Department
-                <ExternalLink className="w-3 h-3 ml-1" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleRefresh}
-              >
-                <RefreshCw className="w-3 h-3 mr-1" />
-                Refresh Data
-              </Button>
-            </div>
+            <p className="text-sm text-red-500 mb-4">{error}</p>
+            <Button variant="outline" size="sm" onClick={() => load(true)}>
+              <RefreshCw className="w-3 h-3 mr-1" /> Retry
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">
-            {news.slice(0, 5).map((item) => (
+            {news.map((item, i) => (
               <motion.div
                 key={item.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
+                transition={{ delay: i * 0.06 }}
                 className="p-4 rounded-lg border bg-card hover:shadow-md transition-all group"
               >
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-start justify-between mb-2 gap-2">
                   <h3 className="font-medium text-sm leading-tight group-hover:text-primary transition-colors">
                     {item.title}
                   </h3>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
                     <Badge className={getCategoryColor(item.category)} variant="secondary">
                       <div className="flex items-center gap-1">
                         {getCategoryIcon(item.category)}
@@ -218,19 +199,15 @@ export function LocationBasedHealthNews({ className }: LocationBasedHealthNewsPr
                     </Badge>
                   </div>
                 </div>
-                
-                <p className="text-xs text-muted-foreground mb-3 line-clamp-2">
-                  {item.summary}
-                </p>
-                
+                <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{item.summary}</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span>{item.source}</span>
                     <span>{new Date(item.publishedAt).toLocaleDateString()}</span>
                   </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
+                  <Button
+                    variant="ghost"
+                    size="sm"
                     className="h-6 px-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity"
                     onClick={() => window.open(item.url, "_blank")}
                   >
@@ -240,19 +217,6 @@ export function LocationBasedHealthNews({ className }: LocationBasedHealthNewsPr
                 </div>
               </motion.div>
             ))}
-            
-            {news.length > 5 && (
-              <div className="text-center pt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => window.open("https://health.odisha.gov.in/", "_blank")}
-                >
-                  View All Updates
-                  <ExternalLink className="w-3 h-3 ml-1" />
-                </Button>
-              </div>
-            )}
           </div>
         )}
       </CardContent>

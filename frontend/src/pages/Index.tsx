@@ -48,6 +48,7 @@ import { DailyInsightCard } from "@/components/DailyInsightCard";
 import { HealthUpdatesTicker } from "@/components/HealthUpdatesTicker";
 import { HealthAlertsPanel } from "@/components/HealthAlertsPanel";
 import { LocationBasedHealthNews } from "@/components/LocationBasedHealthNews";
+import { LocationPickerModal } from "@/components/LocationPickerModal";
 import { useUserLocation } from "@/hooks/useUserLocation";
 
 // Typewriter effect hook
@@ -276,6 +277,8 @@ const Index = () => {
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ["start start", "end start"] });
   const heroOpacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
   const userLocation = useUserLocation();
+  const { confirmLocation, resetLocation, confirmed, loading: locationLoading, city, region, country } = userLocation;
+  const locationProps = { city, region, country };
   const routerLocation = useRouterLocation();
 
   // Nav items with icons
@@ -313,6 +316,10 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-[#FAFAF7] dark:bg-[#0C1210]">
+      {/* Location picker modal — shown until user confirms city */}
+      {!locationLoading && !confirmed && (
+        <LocationPickerModal onConfirm={(c, r, co) => confirmLocation(c, r, co)} />
+      )}
       {/* Navbar */}
       <header className="fixed top-0 left-0 right-0 z-50">
         <nav className={cn(
@@ -373,11 +380,15 @@ const Index = () => {
             {/* Right actions */}
             <div className="flex items-center gap-1.5">
               {/* Location indicator */}
-              {userLocation.city && (
-                <div className="hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/40">
+              {city && (
+                <button
+                  onClick={resetLocation}
+                  className="hidden lg:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200/60 dark:border-emerald-800/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                  title="Change location"
+                >
                   <MapPin className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">{userLocation.city}</span>
-                </div>
+                  <span className="text-xs text-emerald-700 dark:text-emerald-300 font-medium">{city}</span>
+                </button>
               )}
 
               <div className="hidden sm:block">
@@ -469,10 +480,10 @@ const Index = () => {
                   );
                 })}
               </div>
-              {userLocation.city && (
+              {city && (
                 <div className="mt-2 px-3 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
                   <MapPin className="w-3 h-3" />
-                  {[userLocation.city, userLocation.region].filter(Boolean).join(", ")}
+                  {[city, region].filter(Boolean).join(", ")}
                 </div>
               )}
               <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-slate-700/40 px-3">
@@ -612,7 +623,7 @@ const Index = () => {
       <section className="py-12 border-t border-slate-200/60 dark:border-slate-800/40">
         <div className="container mx-auto px-4">
           {/* Location banner */}
-          {userLocation.city && (
+          {city && (
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
@@ -620,21 +631,27 @@ const Index = () => {
             >
               <MapPin className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               <span className="text-sm text-emerald-700 dark:text-emerald-300 font-medium">
-                Showing personalized insights for {[userLocation.city, userLocation.region, userLocation.country].filter(Boolean).join(", ")}
+                Showing personalized insights for {[city, region, country].filter(Boolean).join(", ")}
               </span>
+              <button
+                onClick={resetLocation}
+                className="text-xs text-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-300 underline ml-1"
+              >
+                Change
+              </button>
             </motion.div>
           )}
           <div className="grid lg:grid-cols-5 gap-6">
             {/* Daily Insight */}
             <div className="lg:col-span-2">
-              {!userLocation.loading && (
-                <DailyInsightCard location={{ city: userLocation.city, region: userLocation.region, country: userLocation.country }} />
+              {confirmed && (
+                <DailyInsightCard location={locationProps} />
               )}
             </div>
             {/* Health Updates Ticker */}
             <div className="lg:col-span-3">
-              {!userLocation.loading && (
-                <HealthUpdatesTicker location={{ city: userLocation.city, region: userLocation.region, country: userLocation.country }} />
+              {confirmed && (
+                <HealthUpdatesTicker location={locationProps} />
               )}
             </div>
           </div>
@@ -723,8 +740,12 @@ const Index = () => {
             </p>
           </motion.div>
 
-          <HealthAlertsPanel className="mb-8" />
-          <LocationBasedHealthNews className="rounded-2xl" />
+          {confirmed && (
+            <>
+              <HealthAlertsPanel className="mb-8" location={locationProps} />
+              <LocationBasedHealthNews className="rounded-2xl" location={locationProps} />
+            </>
+          )}
         </div>
       </section>
 
