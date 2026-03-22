@@ -1,33 +1,25 @@
-/**
- * Shared Gemini helper.
- *
- * In development the Vite middleware at /api/gemini handles requests.
- * In production (Vercel) set VITE_API_BASE_URL to your Render backend URL,
- * e.g. https://healerai-backend.onrender.com — then all calls go there instead.
- */
-const API_BASE =
-  (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/$/, "") ?? "";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const GEMINI_API_KEY = "AIzaSyC1FbrqKHMkS18alFf0JvSXImNdDWkyGMs";
+const client = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 export async function callGemini(prompt: string, imageBase64?: string): Promise<string> {
-  const url = `${API_BASE}/api/gemini`;
-  
   try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt, ...(imageBase64 ? { imageBase64 } : {}) }),
-    });
-
-    if (!res.ok) {
-      const text = await res.text();
-      console.error("[v0] Gemini proxy error:", res.status, text.substring(0, 200));
-      throw new Error(`Gemini error ${res.status}`);
+    const model = client.getGenerativeModel({ model: "gemini-3.0-preview" });
+    
+    const parts: any[] = [];
+    if (imageBase64 && typeof imageBase64 === "string") {
+      parts.push({ inlineData: { data: imageBase64, mimeType: "image/jpeg" } });
     }
+    parts.push({ text: prompt });
 
-    const data = await res.json();
-    return data.text as string;
+    const result = await model.generateContent({ contents: [{ parts, role: "user" }] });
+    const response = await result.response;
+    const text = response.text();
+
+    return text;
   } catch (err) {
-    console.error("[v0] Gemini fetch error:", err);
+    console.error("[v0] Gemini error:", err);
     throw err;
   }
 }
