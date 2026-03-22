@@ -243,28 +243,33 @@ export function HealthUpdatesTicker({ className, onViewAll, location }: HealthUp
   const [isPaused, setIsPaused] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const locationKey = [location?.city, location?.region, location?.country].filter(Boolean).join("-") || "general";
+  const locationKey = [location?.city, location?.region, location?.country].filter(Boolean).join("-") || "";
 
   const loadUpdates = async (force = false) => {
     setLoading(true);
-    const cacheKey = `healthUpdates_${locationKey}`;
-    const cachedRaw = localStorage.getItem(cacheKey);
-    if (cachedRaw && !force) {
-      try {
-        const { data, timestamp } = JSON.parse(cachedRaw);
-        const oneDay = 24 * 60 * 60 * 1000;
-        if (Date.now() - timestamp < oneDay) {
-          setUpdates(data);
-          setLoading(false);
-          return;
+    // Use the resolved location key for caching; fall back to "general" only if truly no location
+    const resolvedKey = locationKey || "general";
+    const cacheKey = `healthUpdates_${resolvedKey}`;
+    if (!force) {
+      const cachedRaw = localStorage.getItem(cacheKey);
+      if (cachedRaw) {
+        try {
+          const { data, timestamp } = JSON.parse(cachedRaw);
+          const oneDay = 24 * 60 * 60 * 1000;
+          if (Date.now() - timestamp < oneDay) {
+            setUpdates(data);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // ignore
         }
-      } catch {
-        // ignore
       }
     }
     try {
       const data = await fetchGeminiHealthUpdates(location);
-      localStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
+      const resolvedCacheKey = `healthUpdates_${resolvedKey}`;
+      localStorage.setItem(resolvedCacheKey, JSON.stringify({ data, timestamp: Date.now() }));
       setUpdates(data);
     } catch {
       setUpdates(FALLBACK_HEALTH_UPDATES);
@@ -273,8 +278,11 @@ export function HealthUpdatesTicker({ className, onViewAll, location }: HealthUp
     }
   };
 
+  // Only run when locationKey has a real value (city/region/country resolved)
+  // If locationKey is empty it means location hasn't loaded yet — wait for it
   useEffect(() => {
     loadUpdates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locationKey]);
 
   useEffect(() => {

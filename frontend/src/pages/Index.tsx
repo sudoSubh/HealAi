@@ -627,11 +627,15 @@ const Index = () => {
           <div className="grid lg:grid-cols-5 gap-6">
             {/* Daily Insight */}
             <div className="lg:col-span-2">
-              <DailyInsightCard location={{ city: userLocation.city, region: userLocation.region, country: userLocation.country }} />
+              {!userLocation.loading && (
+                <DailyInsightCard location={{ city: userLocation.city, region: userLocation.region, country: userLocation.country }} />
+              )}
             </div>
             {/* Health Updates Ticker */}
             <div className="lg:col-span-3">
-              <HealthUpdatesTicker location={{ city: userLocation.city, region: userLocation.region, country: userLocation.country }} />
+              {!userLocation.loading && (
+                <HealthUpdatesTicker location={{ city: userLocation.city, region: userLocation.region, country: userLocation.country }} />
+              )}
             </div>
           </div>
         </div>

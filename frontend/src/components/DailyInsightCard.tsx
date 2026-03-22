@@ -15,6 +15,11 @@ export function DailyInsightCard({ location }: DailyInsightCardProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Stable string key so the effect only re-fires when location actually changes
+  const locationKey = [location?.city, location?.region, location?.country]
+    .filter(Boolean)
+    .join(",") || "";
+
   const fetchInsight = async (forceNew = false) => {
     setLoading(true);
     setError(null);
@@ -28,9 +33,11 @@ export function DailyInsightCard({ location }: DailyInsightCardProps) {
     }
   };
 
+  // Re-fetch whenever the resolved location key changes (empty → city name)
   useEffect(() => {
     fetchInsight();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationKey]);
 
   const categoryColors: Record<string, string> = {
     Nutrition: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200",

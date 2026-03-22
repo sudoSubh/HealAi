@@ -18,25 +18,32 @@ export async function generateDailyInsight(
   forceNew: boolean = false,
   location?: { city?: string | null; region?: string | null; country?: string | null }
 ): Promise<DailyInsight> {
-  // Check if we have a cached insight that's less than 24 hours old
-  const cachedData = localStorage.getItem("dailyHealthInsight");
-  if (cachedData && !forceNew) {
-    try {
-      const { insight, timestamp } = JSON.parse(cachedData);
-      const now = new Date().getTime();
-      const oneDay = 24 * 60 * 60 * 1000;
-      if (now - timestamp < oneDay) {
-        return insight;
+  // Build a location-specific cache key so each location gets its own cached insight
+  const locationKey = [location?.city, location?.region, location?.country]
+    .filter(Boolean)
+    .join("-")
+    .toLowerCase()
+    .replace(/\s+/g, "_") || "general";
+  const cacheKey = `dailyHealthInsight_${locationKey}`;
+
+  if (!forceNew) {
+    const cachedData = localStorage.getItem(cacheKey);
+    if (cachedData) {
+      try {
+        const { insight, timestamp } = JSON.parse(cachedData);
+        const oneDay = 24 * 60 * 60 * 1000;
+        if (Date.now() - timestamp < oneDay) {
+          return insight;
+        }
+      } catch {
+        // ignore parse error
       }
-    } catch {
-      // ignore parse error
     }
   }
 
   try {
     const insight = await generateInsightWithGemini(location);
-    const cacheData = { insight, timestamp: new Date().getTime() };
-    localStorage.setItem("dailyHealthInsight", JSON.stringify(cacheData));
+    localStorage.setItem(cacheKey, JSON.stringify({ insight, timestamp: Date.now() }));
     return insight;
   } catch {
     return getDefaultInsight();
