@@ -1,26 +1,36 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
+
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyC1FbrqKHMkS18alFf0JvSXImNdDWkyGMs";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CORS configuration to allow requests from localhost and Vercel
+// Allow all origins in development; in production accept localhost + *.vercel.app + *.onrender.com
 const corsOptions = {
-  origin: [
-    'http://localhost:8080',
-    'http://localhost:5173',
-    'http://127.0.0.1:8080',
-    'http://127.0.0.1:5173',
-    'https://healer--ai.vercel.app',
-    'https://healer--ai-git-*.vercel.app' // For preview deployments
-  ],
-  optionsSuccessStatus: 200
+  origin: (origin, callback) => {
+    // Allow server-to-server calls (no origin), localhost, Vercel and Render deployments
+    if (
+      !origin ||
+      origin.includes('localhost') ||
+      origin.includes('127.0.0.1') ||
+      origin.endsWith('.vercel.app') ||
+      origin.endsWith('.onrender.com')
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    }
+  },
+  optionsSuccessStatus: 200,
 };
 
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// Health check — used by Render
+app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
 // Function to calculate distance between two coordinates using Haversine formula
 function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -39,6 +49,50 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 function deg2rad(deg) {
   return deg * (Math.PI / 180);
 }
+
+// ─── Gemini proxy ────────────────────────────────────────────────────────────
+// All Gemini calls from the frontend are routed here so the API key is never
+// exposed to the browser and Google's origin restrictions are not triggered.
+app.post('/api/gemini', async (req, res) => {
+  const { prompt, imageBase64 } = req.body;
+  if (!prompt || typeof prompt !== 'string') {
+    return res.status(400).json({ error: 'prompt is required' });
+  }
+
+  // Build the Gemini request — support optional image (vision) calls
+  const parts = [];
+  if (imageBase64 && typeof imageBase64 === 'string') {
+    parts.push({ inlineData: { data: imageBase64, mimeType: 'image/jpeg' } });
+  }
+  parts.push({ text: prompt });
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts }],
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errText = await response.text();
+      console.error('[gemini proxy] upstream error', response.status, errText);
+      return res.status(response.status).json({ error: errText });
+    }
+
+    const data = await response.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    return res.json({ text });
+  } catch (err) {
+    console.error('[gemini proxy] fetch error', err);
+    return res.status(500).json({ error: 'Internal error calling Gemini' });
+  }
+});
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Google Places API proxy endpoint
 app.get('/api/google-places', async (req, res) => {
@@ -200,14 +254,7 @@ app.get('/api/google-places', async (req, res) => {
   }
 });
 
-// Serve static files from the React app build directory
-app.use(express.static(path.join(__dirname, '../dist')));
-
-// The "catchall" handler: for any request that doesn't
-// match one above, send back React's index.html file.
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
-});
+// (No static file serving — frontend is deployed separately on Vercel)
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

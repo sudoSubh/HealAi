@@ -1,25 +1,10 @@
-import { GoogleGenerativeAI, GenerativeModel, Content } from "@google/generative-ai";
+import { callGemini } from "./gemini";
 
 // Initialize available Gemini API keys from environment variables
-const getAvailableKeys = () => {
-  const keys = [
-    (import.meta.env as any).VITE_GEMINI_API_KEY,
-    (import.meta.env as any).VITE_GEMINI_API_KEY_2,
-    (import.meta.env as any).VITE_SYMPTOM_CHECKER_API_KEY
-  ].filter(Boolean);
-  // Return array with at least one key, fallback to a dummy to avoid crashes if all missing
-  return keys.length > 0 ? Array.from(new Set(keys)) : ["dummy_key"];
-};
-
+// (kept as shim — actual API calls now go through the backend proxy)
+const getAvailableKeys = () => ["proxy"];
 // Function to get a random GenerativeAI client to load balance requests
-const getRandomGeminiClient = () => {
-  const keys = getAvailableKeys();
-  const randomKey = keys[Math.floor(Math.random() * keys.length)];
-  return new GoogleGenerativeAI(randomKey);
-};
-
-// Exported for backwards compatibility if needed
-const googleGenerativeAI = new GoogleGenerativeAI(getAvailableKeys()[0]);
+const getRandomGeminiClient = () => ({});
 
 // Function to generate content using OpenRouter (fallback)
 export async function generateWithOpenRouter(_prompt: string, _systemContext?: string) {
@@ -46,15 +31,12 @@ export async function generateWithGemini(prompt: string, systemContext?: string)
       fullPrompt = `${systemContext}\n\nUser question: ${prompt}`;
     }
     
-    // Get the Gemini 2.0 Flash model using a random client for load balancing
+    // Route through the backend proxy
     const client = getRandomGeminiClient();
-    const model = client.getGenerativeModel({ model: "gemini-3-flash-preview" });
-    
-    // Generate content
-    const result = await model.generateContent(fullPrompt);
-    const response = await result.response;
-    const content = response.text();
-    
+    void client; // shim only
+
+    const content = await callGemini(fullPrompt);
+
     if (content) {
       // Successfully generated content
       return content;
@@ -72,43 +54,21 @@ export async function generateWithGeminiWithImage(imageData: string, prompt: str
   try {
     // Generating content with model and image
     
-    // Get the Gemini 2.0 Flash model using a random client
-    const client = getRandomGeminiClient();
-    const model: GenerativeModel = client.getGenerativeModel({ model: "gemini-3-flash-preview" });
-    
-    // Prepare the image data
-    // Remove the data URL prefix if present
+    // Route image + text call through the backend proxy
     const base64Data = imageData.replace(/^data:image\/[a-z]+;base64,/, '');
-    
-    // Create the content array with image and text
-    const content: Content[] = [
-      {
-        role: "user",
-        parts: [
-          {
-            inlineData: {
-              data: base64Data,
-              mimeType: "image/jpeg",
-            },
-          },
-          { text: prompt },
-        ],
-      },
-    ];
-    
-    // Add system context if provided
-    if (systemContext) {
-      content.unshift({
-        role: "user",
-        parts: [{ text: systemContext }],
-      });
-    }
-    
-    // Generate content
-    const result = await model.generateContent({ contents: content });
-    const response = await result.response;
-    const text = response.text();
-    
+    const fullPrompt = systemContext
+      ? `${systemContext}\n\n[Image attached as base64]\n\nUser question: ${prompt}`
+      : prompt;
+
+    const res = await fetch("/api/gemini", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: fullPrompt, imageBase64: base64Data }),
+    });
+    if (!res.ok) throw new Error(`Gemini proxy error ${res.status}`);
+    const data = await res.json();
+    const text: string = data.text ?? "";
+
     if (text) {
       // Successfully generated content
       return text;

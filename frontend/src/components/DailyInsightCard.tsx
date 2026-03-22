@@ -2,51 +2,66 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Lightbulb, RefreshCw, Heart } from "lucide-react";
+import { Lightbulb, RefreshCw, Heart, MapPin } from "lucide-react";
 import { generateDailyInsight, type DailyInsight } from "@/services/dailyInsights-openai";
 import { HeartAnimation } from "@/components/HeartAnimation";
 
-export function DailyInsightCard() {
+interface DailyInsightCardProps {
+  location?: { city?: string | null; region?: string | null; country?: string | null };
+}
+
+export function DailyInsightCard({ location }: DailyInsightCardProps) {
   const [insight, setInsight] = useState<DailyInsight | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchInsight = async (forceNew: boolean = false) => {
+  // Stable string key so the effect only re-fires when location actually changes
+  const locationKey = [location?.city, location?.region, location?.country]
+    .filter(Boolean)
+    .join(",") || "";
+
+  const fetchInsight = async (forceNew = false) => {
     setLoading(true);
     setError(null);
     try {
-      const newInsight = await generateDailyInsight(forceNew);
+      const newInsight = await generateDailyInsight(forceNew, location);
       setInsight(newInsight);
-    } catch (err) {
+    } catch {
       setError("Failed to load daily insight. Please try again later.");
-      console.error("Error fetching daily insight:", err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRetry = () => {
-    fetchInsight(true); // Force new insight generation
-  };
-
-  const handleRefresh = () => {
-    fetchInsight(true); // Force new insight generation
-  };
-
+  // Re-fetch whenever the resolved location key changes (empty → city name)
   useEffect(() => {
     fetchInsight();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locationKey]);
+
+  const categoryColors: Record<string, string> = {
+    Nutrition: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200",
+    Exercise: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
+    "Mental Health": "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200",
+    Sleep: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200",
+    Prevention: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200",
+    "General Health": "bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-200",
+  };
 
   if (loading) {
     return (
-      <Card className="bg-card border shadow-lg rounded-2xl overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-primary to-emerald-500"></div>
+      <Card className="bg-card border shadow-lg rounded-2xl overflow-hidden h-full">
+        <div className="h-2 bg-gradient-to-r from-primary to-emerald-500" />
         <CardHeader>
           <CardTitle className="flex items-center text-foreground">
             <Lightbulb className="w-5 h-5 mr-2 text-primary" />
             Daily Health Insight
           </CardTitle>
-          <CardDescription>Loading your personalized health tip...</CardDescription>
+          <CardDescription>
+            {location?.city
+              ? `Generating today's insight for ${location.city}…`
+              : "Generating your personalized health tip…"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-32">
@@ -60,7 +75,7 @@ export function DailyInsightCard() {
   if (error) {
     return (
       <Card className="bg-card border shadow-lg rounded-2xl overflow-hidden">
-        <div className="h-2 bg-gradient-to-r from-primary to-emerald-500"></div>
+        <div className="h-2 bg-gradient-to-r from-primary to-emerald-500" />
         <CardHeader>
           <CardTitle className="flex items-center text-foreground">
             <Lightbulb className="w-5 h-5 mr-2 text-primary" />
@@ -69,7 +84,7 @@ export function DailyInsightCard() {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground mb-4">{error}</p>
-          <Button onClick={handleRetry} variant="outline" className="rounded-full">
+          <Button onClick={() => fetchInsight(true)} variant="outline" className="rounded-full">
             <RefreshCw className="w-4 h-4 mr-2" />
             Try Again
           </Button>
@@ -78,38 +93,37 @@ export function DailyInsightCard() {
     );
   }
 
-  if (!insight) {
-    return null;
-  }
+  if (!insight) return null;
 
-  const categoryColors: Record<string, string> = {
-    Nutrition: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200",
-    Exercise: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
-    "Mental Health": "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-200",
-    Sleep: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-200",
-    Prevention: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200",
-  };
+  const today = new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 
   return (
-    <Card className="bg-card border shadow-lg rounded-2xl overflow-hidden">
-      <div className="h-2 bg-gradient-to-r from-primary to-emerald-500"></div>
+    <Card className="bg-card border shadow-lg rounded-2xl overflow-hidden h-full">
+      <div className="h-2 bg-gradient-to-r from-primary to-emerald-500" />
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center text-foreground">
             <Lightbulb className="w-5 h-5 mr-2 text-primary" />
             Daily Health Insight
           </CardTitle>
-          <Button 
-            onClick={handleRefresh} 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            onClick={() => fetchInsight(true)}
+            variant="ghost"
+            size="sm"
             className="rounded-full hover:bg-muted"
+            title="Refresh insight"
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
-        <CardDescription>
-          Personalized tip to improve your wellness journey
+        <CardDescription className="flex flex-col gap-1">
+          <span>{today}</span>
+          {location?.city && (
+            <span className="flex items-center gap-1 text-xs text-primary">
+              <MapPin className="w-3 h-3" />
+              {[location.city, location.region, location.country].filter(Boolean).join(", ")}
+            </span>
+          )}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -120,7 +134,7 @@ export function DailyInsightCard() {
         </div>
         <h3 className="text-xl font-semibold text-foreground mb-2">{insight.title}</h3>
         <p className="text-muted-foreground mb-4">{insight.content}</p>
-        
+
         <div className="space-y-2 mb-4">
           <h4 className="font-medium text-foreground">Actionable Tips:</h4>
           <ul className="space-y-1">
@@ -132,10 +146,10 @@ export function DailyInsightCard() {
             ))}
           </ul>
         </div>
-        
+
         <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
           <p className="text-primary font-medium flex items-center">
-            <Heart className="w-4 h-4 mr-2" />
+            <Heart className="w-4 h-4 mr-2 flex-shrink-0" />
             {insight.motivation}
           </p>
         </div>

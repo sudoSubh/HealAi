@@ -1,16 +1,8 @@
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
+import { callGemini } from "./gemini";
 
 // Function to get a random GenerativeAI client to load balance requests
-const getRandomGeminiClient = () => {
-  const keys = [
-    (import.meta.env as any).VITE_SYMPTOM_CHECKER_API_KEY,
-    (import.meta.env as any).VITE_GEMINI_API_KEY,
-    (import.meta.env as any).VITE_GEMINI_API_KEY_2
-  ].filter(Boolean);
-  const activeKeys = keys.length > 0 ? Array.from(new Set(keys)) : ["dummy_key"];
-  const randomKey = activeKeys[Math.floor(Math.random() * activeKeys.length)];
-  return new GoogleGenerativeAI(randomKey);
-};
+// (kept as a no-op shim to avoid breaking other references)
+const getRandomGeminiClient = () => ({});
 
 interface AnalysisData {
   symptoms: string[];
@@ -214,14 +206,8 @@ export async function analyzeSymptomsWithGemini(data: AnalysisData): Promise<Ana
       .replace("{recentChanges}", data.recentChanges || "None reported")
       .replace("{familyHistory}", data.familyHistory.join(", ") || "None reported");
 
-    // Get the Gemini 2.0 Flash model (stable, faster, and newer)
-    const client = getRandomGeminiClient();
-    const model: GenerativeModel = client.getGenerativeModel({ model: "gemini-3-flash-preview" });
-
-    // Generate content
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    // Route through the backend proxy
+    const text = await callGemini(prompt);
 
     if (text) {
       try {
