@@ -22,10 +22,28 @@ import {
   Sun,
   Moon,
   Menu,
-  X
+  X,
+  Globe,
+  User,
+  MessageCircle,
+  Send,
+  Minimize2,
+  LogOut,
+  Settings,
+  ChevronDown
 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
 
 // Typewriter effect hook
 const useTypewriter = (words: string[], typingSpeed = 100, deletingSpeed = 50, pauseTime = 2000) => {
@@ -190,8 +208,140 @@ const FeatureCard = ({
   </motion.div>
 );
 
+// Languages data
+const LANGUAGES = [
+  { code: "en", name: "English", flag: "🇺🇸" },
+  { code: "hi", name: "Hindi", flag: "🇮🇳" },
+  { code: "es", name: "Spanish", flag: "🇪🇸" },
+  { code: "fr", name: "French", flag: "🇫🇷" },
+  { code: "de", name: "German", flag: "🇩🇪" },
+  { code: "zh", name: "Chinese", flag: "🇨🇳" },
+  { code: "ar", name: "Arabic", flag: "🇸🇦" },
+  { code: "pt", name: "Portuguese", flag: "🇧🇷" },
+];
+
+// AI Chat Bubble Component
+const AIChatBubble = () => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<{role: "user" | "assistant", content: string}[]>([
+    { role: "assistant", content: "Hello! I'm your AI health assistant. How can I help you today?" }
+  ]);
+
+  const handleSend = () => {
+    if (!message.trim()) return;
+    setMessages(prev => [...prev, { role: "user", content: message }]);
+    // Simulate AI response
+    setTimeout(() => {
+      setMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "Thank you for your question. For detailed medical advice, please use our AI Symptom Checker or Medical Chatbot features. Would you like me to direct you there?" 
+      }]);
+    }, 1000);
+    setMessage("");
+  };
+
+  return (
+    <>
+      {/* Chat Bubble Button */}
+      <motion.button
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          "fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full",
+          "bg-gradient-to-r from-teal-500 to-emerald-500",
+          "shadow-lg shadow-teal-500/30",
+          "flex items-center justify-center",
+          "hover:scale-110 transition-transform duration-200"
+        )}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        {isOpen ? (
+          <Minimize2 className="w-6 h-6 text-white" />
+        ) : (
+          <MessageCircle className="w-6 h-6 text-white" />
+        )}
+      </motion.button>
+
+      {/* Chat Window */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className={cn(
+              "fixed bottom-24 right-6 z-50 w-80 sm:w-96",
+              "bg-white dark:bg-slate-900 rounded-2xl",
+              "border border-slate-200 dark:border-slate-700",
+              "shadow-2xl overflow-hidden"
+            )}
+          >
+            {/* Header */}
+            <div className="bg-gradient-to-r from-teal-500 to-emerald-500 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">AI Health Assistant</h3>
+                  <p className="text-xs text-white/80">Online - Ready to help</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="h-64 overflow-y-auto p-4 space-y-3">
+              {messages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={cn(
+                    "max-w-[80%] p-3 rounded-2xl text-sm",
+                    msg.role === "user" 
+                      ? "ml-auto bg-teal-500 text-white rounded-br-md"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 rounded-bl-md"
+                  )}
+                >
+                  {msg.content}
+                </div>
+              ))}
+            </div>
+
+            {/* Input */}
+            <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+              <div className="flex gap-2">
+                <Input
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Ask me anything..."
+                  className="flex-1 rounded-full"
+                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                />
+                <Button
+                  onClick={handleSend}
+                  size="icon"
+                  className="rounded-full bg-teal-500 hover:bg-teal-600"
+                >
+                  <Send className="w-4 h-4" />
+                </Button>
+              </div>
+              <Link to="/medical-bot" className="block mt-2">
+                <p className="text-xs text-center text-teal-600 dark:text-teal-400 hover:underline">
+                  Open full AI Medical Chat
+                </p>
+              </Link>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
+
 const Index = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState(LANGUAGES[0]);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const typewriterText = useTypewriter([
     "AI Symptom Checker",
     "24/7 Medical Chatbot", 
@@ -273,12 +423,15 @@ const Index = () => {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-8">
+            <div className="hidden md:flex items-center gap-6">
               <Link to="/symptoms" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
                 Symptoms
               </Link>
               <Link to="/medical-bot" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
                 AI Chat
+              </Link>
+              <Link to="/health-hub" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
+                Health Hub
               </Link>
               <Link to="/education" className="text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
                 Education
@@ -289,21 +442,87 @@ const Index = () => {
             </div>
 
             {/* Right Side */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {/* Language Selector */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="hidden sm:flex items-center gap-1.5 px-2">
+                    <Globe className="w-4 h-4" />
+                    <span className="text-xs">{currentLanguage.flag}</span>
+                    <ChevronDown className="w-3 h-3 opacity-50" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuLabel>Language</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {LANGUAGES.map((lang) => (
+                    <DropdownMenuItem
+                      key={lang.code}
+                      onClick={() => setCurrentLanguage(lang)}
+                      className={cn(
+                        "cursor-pointer",
+                        currentLanguage.code === lang.code && "bg-teal-50 dark:bg-teal-900/30"
+                      )}
+                    >
+                      <span className="mr-2">{lang.flag}</span>
+                      {lang.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <ModeToggle />
-              <Link to="/symptoms" className="hidden sm:block">
+
+              {/* Profile / Auth */}
+              {isLoggedIn ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src="/avatar.png" alt="User" />
+                        <AvatarFallback className="bg-teal-100 text-teal-700 dark:bg-teal-900 dark:text-teal-300">
+                          <User className="w-4 h-4" />
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem>
+                      <User className="w-4 h-4 mr-2" />
+                      Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Settings className="w-4 h-4 mr-2" />
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuItem>
+                      <Heart className="w-4 h-4 mr-2" />
+                      Health Records
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => setIsLoggedIn(false)} className="text-red-600 dark:text-red-400">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
                 <Button 
+                  onClick={() => setIsLoggedIn(true)}
                   className={cn(
-                    "rounded-full px-6 font-semibold",
+                    "rounded-full px-5 font-semibold text-sm",
                     "bg-gradient-to-r from-teal-500 to-emerald-500",
                     "hover:from-teal-600 hover:to-emerald-600",
                     "text-white shadow-lg shadow-teal-500/25",
                     "transition-all duration-300"
                   )}
                 >
-                  Get Started
+                  Sign In
                 </Button>
-              </Link>
+              )}
+
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -331,16 +550,42 @@ const Index = () => {
               )}
             >
               <div className="flex flex-col gap-2">
-                {["Symptoms", "AI Chat", "Education", "Resources"].map((item) => (
+                {[
+                  { name: "Symptoms", path: "/symptoms" },
+                  { name: "AI Chat", path: "/medical-bot" },
+                  { name: "Health Hub", path: "/health-hub" },
+                  { name: "Education", path: "/education" },
+                  { name: "Resources", path: "/resources" }
+                ].map((item) => (
                   <Link
-                    key={item}
-                    to={`/${item.toLowerCase().replace(" ", "-")}`}
+                    key={item.name}
+                    to={item.path}
                     className="px-4 py-3 rounded-xl text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    {item}
+                    {item.name}
                   </Link>
                 ))}
+                {/* Mobile Language Selector */}
+                <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 mt-2">
+                  <p className="text-xs text-slate-500 mb-2">Language</p>
+                  <div className="flex flex-wrap gap-2">
+                    {LANGUAGES.slice(0, 4).map((lang) => (
+                      <button
+                        key={lang.code}
+                        onClick={() => setCurrentLanguage(lang)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-full text-sm flex items-center gap-1",
+                          currentLanguage.code === lang.code 
+                            ? "bg-teal-500 text-white" 
+                            : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                        )}
+                      >
+                        {lang.flag} {lang.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -657,6 +902,9 @@ const Index = () => {
               </span>
             </div>
             <div className="flex items-center gap-6 text-sm text-slate-600 dark:text-slate-400">
+              <Link to="/health-hub" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
+                Health Hub
+              </Link>
               <Link to="/education" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
                 Education
               </Link>
@@ -672,6 +920,9 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      {/* AI Chat Bubble */}
+      <AIChatBubble />
     </div>
   );
 };
