@@ -3,11 +3,10 @@
   "version": "1.0.0",
   "description": "HealerAI - Health Navigation Platform",
   "private": true,
-  "dependencies": {
-    "@google/generative-ai": "^0.24.1",
-    "framer-motion": "^12.38.0",
-    "lucide-react": "^0.577.0",
-    "react": "^19.2.4",
-    "react-router-dom": "^7.13.1"
+  "scripts": {
+    "start": "cd frontend && npm run dev",
+    "dev": "cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "install": "cd frontend && npm install"
   }
 }
