@@ -45,9 +45,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { GoogleTranslate } from "@/components/GoogleTranslate";
 import { DailyInsightCard } from "@/components/DailyInsightCard";
-import { HealthUpdatesTicker } from "@/components/HealthUpdatesTicker";
-import { HealthAlertsPanel } from "@/components/HealthAlertsPanel";
-import { LocationBasedHealthNews } from "@/components/LocationBasedHealthNews";
 import { LocationPickerModal } from "@/components/LocationPickerModal";
 import { useUserLocation } from "@/hooks/useUserLocation";
 
@@ -643,15 +640,9 @@ const Index = () => {
           )}
           <div className="grid lg:grid-cols-5 gap-6">
             {/* Daily Insight */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-5">
               {confirmed && (
                 <DailyInsightCard location={locationProps} />
-              )}
-            </div>
-            {/* Health Updates Ticker */}
-            <div className="lg:col-span-3">
-              {confirmed && (
-                <HealthUpdatesTicker location={locationProps} />
               )}
             </div>
           </div>
@@ -741,10 +732,20 @@ const Index = () => {
           </motion.div>
 
           {confirmed && (
-            <>
-              <HealthAlertsPanel className="mb-8" location={locationProps} />
-              <LocationBasedHealthNews className="rounded-2xl" location={locationProps} />
-            </>
+            <section className="space-y-8">
+              {/* Medical Report Analysis Feature */}
+              <div className="text-center py-16 px-4 bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/10 rounded-2xl border border-teal-200/50 dark:border-teal-800/30">
+                <Brain className="w-12 h-12 mx-auto mb-4 text-teal-600 dark:text-teal-400" />
+                <h2 className="text-2xl font-bold text-foreground mb-2">Medical Report Analysis</h2>
+                <p className="text-muted-foreground max-w-2xl mx-auto mb-6">Upload lab reports, MRI/CT scans, and receive AI-powered analysis with personalized diet plans, daily recommendations, and treatment remedies.</p>
+                <Link to="/medical-dashboard">
+                  <Button className="rounded-full px-8 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white">
+                    Get Started with Report Analysis
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </Link>
+              </div>
+            </section>
           )}
         </div>
       </section>

@@ -14,6 +14,7 @@ import Nutrition from './pages/education/articles/Nutrition';
 import MentalHealth from './pages/education/articles/MentalHealth';
 import HeartHealth from './pages/education/articles/HeartHealth';
 import GeminiMedicalBotPage from './pages/GeminiMedicalBot';
+import { MedicalDashboard } from './pages/MedicalDashboard';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/symptoms" element={<SymptomChecker />} />
         <Route path="/medical-bot" element={<MedicalBot />} />
         <Route path="/gemini-medical-bot" element={<GeminiMedicalBotPage />} />
+        <Route path="/medical-dashboard" element={<MedicalDashboard />} />
         <Route path="/education" element={<EducationHub />} />
         <Route path="/education/articles" element={<Articles />} />
         <Route path="/education/videos" element={<Videos />} />
